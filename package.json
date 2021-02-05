@@ -39,15 +39,18 @@
   ],
   "homepage": "https://github.com/Kitalive-Inc/sfdx-plugin",
   "keywords": [
-    "sfdx-plugin"
+    "sfdx-plugin",
+    "sfdx",
+    "plugin",
+    "salesforce"
   ],
   "license": "MIT",
   "oclif": {
     "commands": "./lib/commands",
     "bin": "sfdx",
     "topics": {
-      "hello": {
-        "description": "Commands to say hello."
+      "kit:layout:assignments": {
+        "description": "Commands to manage object layout assignments without profiles."
       }
     },
     "devPlugins": [
