@@ -34,10 +34,10 @@ USAGE
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
-deploy page layout assignments
+deploy page layout assignments from JSON file
 
 ```
-deploy page layout assignments
+deploy page layout assignments from JSON file
 
 USAGE
   $ sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel 
@@ -67,10 +67,10 @@ EXAMPLES
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
-retrieve page layout assignments
+retrieve page layout assignments and save to JSON file
 
 ```
-retrieve page layout assignments
+retrieve page layout assignments and save to JSON file
 
 USAGE
   $ sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion 

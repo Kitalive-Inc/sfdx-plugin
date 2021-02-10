@@ -1,10 +1,13 @@
 import { flags, SfdxCommand } from '@salesforce/command';
-import { AnyJson } from '@salesforce/ts-types';
+import { SfdxError } from '@salesforce/core';
+import * as glob from 'fast-glob';
 import * as fs from 'fs-extra';
 import * as path from 'path';
+import { LayoutAssignmentsPerProfile, ProfileMetadata } from '../../../../types';
+import { chunk } from '../../../../utils';
 
 export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
-  public static description = 'retrieve page layout assignments';
+  public static description = 'retrieve page layout assignments and save to JSON file';
 
   public static examples = [
     '$ sfdx kit:layout:assignments:retrieve',
@@ -22,46 +25,63 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
     merge: flags.boolean({ required: false, description: 'merge retrieved configurations with existing file' })
   };
 
-  public async run(): Promise<AnyJson> {
-    const outputFile = path.join(this.project.path, this.flags.file);
+  public async run(): Promise<LayoutAssignmentsPerProfile> {
     const filterObjects = this.flags.object ? this.flags.object.split(',') : await this.objectNamesFromLayouts();
-    const layoutAssignmentsPerProfile = this.flags.merge ? await fs.readJson(outputFile).catch(() => {}) : {};
+    if (filterObjects.length === 0) throw new SfdxError('There are no objects to retrieve');
 
-    const conn = this.org.getConnection();
+    const data: LayoutAssignmentsPerProfile = this.flags.merge ? await this.readFile(this.flags.file) : {};
 
-    const fullNames = this.flags.profile ?
-      this.flags.profile.split(',') :
-      await conn.metadata.list({ type: 'Profile' }).then(profiles => profiles.map(p => p.fullName));
+    const profileNames = this.flags.profile ? this.flags.profile.split(',') : await this.getProfileNames();
+
+    this.ux.log(`retrieve layout assignments\n\tprofiles: ${profileNames.join(', ')}\n\tobjects: ${filterObjects.join(', ')}`);
 
     // limit 10 records per one API call
-    for (let i = 0; i < fullNames.length; i += 10) {
-      let profiles = await conn.metadata.read('Profile', fullNames.slice(i, i + 10));
-      if (!Array.isArray(profiles)) profiles = [profiles];
-      for (const profile of profiles) {
-        if (!profile.fullName || !profile.layoutAssignments) continue;
-        layoutAssignmentsPerProfile[profile.fullName] = profile.layoutAssignments.filter(assignment =>
-          filterObjects.includes(assignment.layout.split('-')[0])
-        ).sort((a, b) => a.layout.localeCompare(b.layout));
-      }
+    const profiles = await Promise.all(chunk(profileNames, 10).map(names => this.getProfiles(names))).then(a => [].concat(...a));
+    for (const profile of profiles) {
+      if (!profile.fullName || !profile.layoutAssignments) continue;
+      data[profile.fullName] = profile.layoutAssignments.filter(
+        assignment => filterObjects.includes(assignment.layout.split('-')[0])
+      ).sort((a, b) => a.layout.localeCompare(b.layout));
     }
 
-    this.ux.log('retrieve layout assignments to ' + this.flags.file);
-    await fs.outputJson(outputFile, layoutAssignmentsPerProfile, { spaces: '\t' });
+    this.ux.log('save to ' + this.flags.file);
+    await this.writeFile(this.flags.file, data);
 
-    return layoutAssignmentsPerProfile;
+    return data;
   }
 
-  private async objectNamesFromLayouts() {
-    const config = await this.project.resolveProjectConfig();
-    const packageDir = config.packageDirectories.find(dir => dir.default);
-    const layoutPath = path.join(this.project.path, packageDir.path, 'main/default/layouts');
+  public async objectNamesFromLayouts(): Promise<string[]> {
+    // tslint:disable-next-line
+    const config: any = await this.project.resolveProjectConfig();
+    const packageDir = config.packageDirectories && config.packageDirectories.find(dir => dir.default);
+    if (!packageDir) return [];
+
+    const pattern = path.join(this.project.getPath(), packageDir.path, '**/*.layout-meta.xml');
     const objectCounts = {};
-    for (const filename of await fs.readdir(layoutPath)) {
-        const object = filename.split('-')[0];
+    for (const filepath of await this.findFiles(pattern)) {
+        const object = path.basename(filepath).split('-')[0];
         objectCounts[object] = (objectCounts[object] || 0) + 1;
     }
-    const objects = Object.keys(objectCounts).filter(object => objectCounts[object] >= 2);
-    if (objects.length === 0) throw new Error('There are no objects which have multiple layouts');
-    return objects;
+    return Object.keys(objectCounts).filter(object => objectCounts[object] >= 2).sort();
+  }
+
+  private getProfileNames(): Promise<string[]> {
+    return this.org.getConnection().metadata.list({ type: 'Profile' }).then(profiles => profiles.map(p => p.fullName));
+  }
+
+  private getProfiles(names: string[]): Promise<ProfileMetadata[]> {
+    return this.org.getConnection().metadata.read('Profile', names) as Promise<ProfileMetadata[]>;
+  }
+
+  private findFiles(pattern: string): Promise<string[]> {
+    return glob(pattern);
+  }
+
+  private readFile(file: string): Promise<LayoutAssignmentsPerProfile> {
+    return fs.readJson(path.join(this.project.getPath(), file));
+  }
+
+  private writeFile(file: string, data: LayoutAssignmentsPerProfile) {
+    return fs.outputJson(path.join(this.project.getPath(), file), data, { spaces: '\t' });
   }
 }

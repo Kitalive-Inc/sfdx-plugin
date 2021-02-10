@@ -1,10 +1,12 @@
 import { flags, SfdxCommand } from '@salesforce/command';
-import { AnyJson } from '@salesforce/ts-types';
 import * as fs from 'fs-extra';
+import { SaveResult } from 'jsforce';
 import * as path from 'path';
+import { LayoutAssignmentsPerProfile, ProfileMetadata } from '../../../../types';
+import { chunk } from '../../../../utils';
 
 export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
-  public static description = 'deploy page layout assignments';
+  public static description = 'deploy page layout assignments from JSON file';
 
   public static examples = [
     '$ sfdx kit:layout:assignments:deploy',
@@ -19,13 +21,20 @@ export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
     file: flags.string({ char: 'f', required: true, description: 'input file path', default: 'config/layout-assignments.json' })
   };
 
-  public async run(): Promise<AnyJson> {
-    const inputFile = path.join(this.project.path, this.flags.file);
-    const layoutAssignmentsPerProfile = await fs.readJson(inputFile);
-    const conn = this.org.getConnection();
-    const data = Object.entries(layoutAssignmentsPerProfile).map(([fullName, layoutAssignments]) => ({ fullName, layoutAssignments }));
+  public async run(): Promise<SaveResult[]> {
     this.ux.log('deploy layout assignments from ' + this.flags.file);
+    const layoutAssignmentsPerProfile = await this.readFile(this.flags.file);
+    const profiles = Object.entries(layoutAssignmentsPerProfile).map(([fullName, layoutAssignments]) => ({ fullName, layoutAssignments }));
+    // limit 10 records per one API call
+    return Promise.all(chunk(profiles, 10).map(data => this.deploy(data))).then(a => [].concat(...a));
+  }
 
-    return conn.metadata.update('Profile', data);
+  private readFile(file): Promise<LayoutAssignmentsPerProfile> {
+    const inputFile = path.join(this.project.getPath(), file);
+    return fs.readJson(inputFile);
+  }
+
+  private deploy(data: ProfileMetadata[]) {
+    return this.org.getConnection().metadata.update('Profile', data);
   }
 }
