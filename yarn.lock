@@ -1033,10 +1033,20 @@ csprng@*, csprng@~0.1.2:
   dependencies:
     sequin "*"
 
+csv-generate@^3.2.4:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/csv-generate/-/csv-generate-3.3.0.tgz#0e25658f1bb9806d94fec7b270896a35c7eedf1a"
+  integrity sha512-EXSru4QwEWKwM7wwsJbhrZC+mHEJrhQFoXlohHs80CAU8Qhlv9gaw1sjzNiC3Hr3oUx5skDmEiAlz+tnKWV0RA==
+
 csv-parse@^4.10.1:
   version "4.15.1"
   resolved "https://registry.yarnpkg.com/csv-parse/-/csv-parse-4.15.1.tgz#fc5a0a1b24eaa6d4c24892daa387c46f7f92f8d2"
   integrity sha512-TXIvRtNp0fqMJbk3yPR35bQIDzMH4khDwduElzE7Fl1wgnl25mnWYLSLqd/wS5GsDoX1rWtysivEYMNsz5jKwQ==
+
+csv-parse@^4.8.8:
+  version "4.15.3"
+  resolved "https://registry.yarnpkg.com/csv-parse/-/csv-parse-4.15.3.tgz#8a62759617a920c328cb31c351b05053b8f92b10"
+  integrity sha512-jlTqDvLdHnYMSr08ynNfk4IAUSJgJjTKy2U5CQBSu4cN9vQOJonLVZP4Qo4gKKrIgIQ5dr07UwOJdi+lRqT12w==
 
 csv-stringify@^1.0.4:
   version "1.1.2"
@@ -1044,6 +1054,21 @@ csv-stringify@^1.0.4:
   integrity sha1-d6QVJlgbzjOA8SsA18W7rHDIK1g=
   dependencies:
     lodash.get "~4.4.2"
+
+csv-stringify@^5.3.6:
+  version "5.6.2"
+  resolved "https://registry.yarnpkg.com/csv-stringify/-/csv-stringify-5.6.2.tgz#e653783e2189c4c797fbb12abf7f4943c787caa9"
+  integrity sha512-n3rIVbX6ylm1YsX2NEug9IaPV8xRnT+9/NNZbrA/bcHgOSSeqtWla6XnI/xmyu57wIw+ASCAoX1oM6EZtqJV0A==
+
+csv@^5.3.2:
+  version "5.3.2"
+  resolved "https://registry.yarnpkg.com/csv/-/csv-5.3.2.tgz#50b344e25dfbb8c62684a1bcec18c22468b2161e"
+  integrity sha512-odDyucr9OgJTdGM2wrMbJXbOkJx3nnUX3Pt8SFOwlAMOpsUQlz1dywvLMXJWX/4Ib0rjfOsaawuuwfI5ucqBGQ==
+  dependencies:
+    csv-generate "^3.2.4"
+    csv-parse "^4.8.8"
+    csv-stringify "^5.3.6"
+    stream-transform "^2.0.1"
 
 dashdash@^1.12.0:
   version "1.14.1"
@@ -1803,6 +1828,13 @@ hyperlinker@^1.0.0:
   resolved "https://registry.yarnpkg.com/hyperlinker/-/hyperlinker-1.0.0.tgz#23dc9e38a206b208ee49bc2d6c8ef47027df0c0e"
   integrity sha512-Ty8UblRWFEcfSuIaajM34LdPXIhbs1ajEX/BBPv24J+enSVaEVY63xQ6lTO9VRYS5LAoghIG0IDJ+p+IPzKUQQ==
 
+iconv-lite@^0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/iconv-lite/-/iconv-lite-0.6.2.tgz#ce13d1875b0c3a674bd6a04b7f76b01b1b6ded01"
+  integrity sha512-2y91h5OpQlolefMPmUlivelittSWy0rP+oYVpn6A7GwVHNE8AWzoYOBNmlwks3LobaJxgHCYZAnyNo2GgpNRNQ==
+  dependencies:
+    safer-buffer ">= 2.1.2 < 3.0.0"
+
 ieee754@^1.1.13:
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/ieee754/-/ieee754-1.2.1.tgz#8eb7a10a63fff25d15a57b001586d177d1b0d352"
@@ -2508,6 +2540,11 @@ mixin-deep@^1.2.0:
     for-in "^1.0.2"
     is-extendable "^1.0.1"
 
+mixme@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/mixme/-/mixme-0.4.0.tgz#a1aee27f0d63cc905e1cc6ddc98abf94d414435e"
+  integrity sha512-B4Sm1CDC5+ov5AYxSkyeT5HLtiDgNOLKwFlq34wr8E2O3zRdTvQiLzo599Jt9cir6VJrSenOlgvdooVYCQJIYw==
+
 mkdirp-classic@^0.5.2:
   version "0.5.3"
   resolved "https://registry.yarnpkg.com/mkdirp-classic/-/mkdirp-classic-0.5.3.tgz#fa10c9115cc6d8865be221ba47ee9bed78601113"
@@ -3169,7 +3206,7 @@ safe-regex@^1.1.0:
   dependencies:
     ret "~0.1.10"
 
-safer-buffer@^2.0.2, safer-buffer@^2.1.0, safer-buffer@~2.1.0:
+"safer-buffer@>= 2.1.2 < 3.0.0", safer-buffer@^2.0.2, safer-buffer@^2.1.0, safer-buffer@~2.1.0:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/safer-buffer/-/safer-buffer-2.1.2.tgz#44fa161b0187b9549dd84bb91802f9bd8385cd6a"
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
@@ -3423,6 +3460,13 @@ stdout-stderr@^0.1.9:
   dependencies:
     debug "^4.1.1"
     strip-ansi "^6.0.0"
+
+stream-transform@^2.0.1:
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/stream-transform/-/stream-transform-2.0.4.tgz#911ff7556d1e25c237e95d783f6739d9e0b4a61c"
+  integrity sha512-LQXH1pUksoef5Ijo6+2ihnjLLZtZuoqu1vhut6a7xZ77nrLA/shbbx2FAzVC/nkb6wwrPzOO98700mv4HDQcWg==
+  dependencies:
+    mixme "^0.4.0"
 
 string-width@^2.1.1:
   version "2.1.1"
