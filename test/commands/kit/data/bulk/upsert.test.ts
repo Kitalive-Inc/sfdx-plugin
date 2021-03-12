@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as sinon from 'sinon';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
 
+const { Readable } = require('stream');
 const ALM_PATH = path.dirname(require.resolve('salesforce-alm'));
 const dataBulk= require(path.join(ALM_PATH, 'lib/data/dataBulkUpsertCommand'));
 
@@ -24,10 +25,13 @@ describe('.parseCsv', () => {
     expect(rows).to.eql(csvRows)
   });
 
-  it('with columnMappings', async () => {
-    const rows = await subject(csvStream(), 'utf8', {
-      Field1__c: 'col1',
-      Field2__c: 'col3'
+  it('with mapping', async () => {
+    const rows = await subject(csvStream(), {
+      encoding: 'utf8',
+      mapping: {
+        Field1__c: 'col1',
+        Field2__c: 'col3'
+      }
     });
     expect(rows).to.eql([
       { Field1__c: 'col1_1', Field2__c: 'col3_1' },
@@ -37,17 +41,39 @@ describe('.parseCsv', () => {
   });
 
   it('with transform', async () => {
-    const rows = await subject(csvStream(), 'utf8', null, (row) => {
-      if (row.col1 === 'col1_2') return null;
+    const rows = await subject(csvStream(), {
+      transform: (row) => {
+        if (row.col1 === 'col1_2') return null;
 
-      return {
-        Field1__c: `${row.col1} ${row.col2}`,
-        Field2__c: row.col3
-      };
+        return {
+          Field1__c: `${row.col1} ${row.col2}`,
+          Field2__c: row.col3
+        };
+      }
     });
     expect(rows).to.eql([
       { Field1__c: 'col1_1 col2_1', Field2__c: 'col3_1' },
       { Field1__c: 'col1_3 col2_3', Field2__c: 'col3_3' }
+    ]);
+  });
+
+  it('with setnull', async () => {
+    const rows = await subject(
+      Readable.from('empty,reference.key,value\n,,test'),
+      { setnull: true }
+    );
+    expect(rows).to.eql([
+      { empty: '#N/A', 'reference.key': '', value: 'test' }
+    ]);
+  });
+
+  it('with delimiter', async () => {
+    const rows = await subject(
+      Readable.from('a:b:c\nv1:v2:v3'),
+      { delimiter: ':' }
+    );
+    expect(rows).to.eql([
+      { a: 'v1', b: 'v2', c: 'v3' }
     ]);
   });
 });
@@ -55,16 +81,16 @@ describe('.parseCsv', () => {
 const commandName = 'kit:data:bulk:upsert';
 describe(commandName, () => {
   const csvRows = [
-    { 'Account.Name': 'account1', Name: 'contact1' },
-    { 'Account.Name': 'account2', Name: 'contact2' },
-    { 'Account.Name': 'account3', Name: 'contact3' }
+    { 'Account.ExternalId__c': 'code1', LastName: 'contact1', Email: 'contact1@example.com' },
+    { 'Account.ExternalId__c': 'code1', LastName: 'contact2', Email: 'contact2@example.com' },
+    { 'Account.ExternalId__c': 'code2', LastName: 'contact3', Email: 'contact3@example.com' }
   ];
 
   const job = {};
   const createReadStream = sinon.spy(file => csv.stringify(csvRows));
   const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
   const saveCsv = sinon.spy();
-  const createJob = sinon.spy((sobject, options) => job);
+  const createJob = sinon.spy((sobject, options) => Promise.resolve(job));
   const createAndExecuteBatches = sinon.spy((...args) => Promise.resolve());
 
   afterEach(() => {
@@ -91,9 +117,13 @@ describe(commandName, () => {
       expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
       expect(parseCsv.calledOnce).to.be.true;
-      expect(parseCsv.args[0][1]).to.eq('utf8');
-      expect(parseCsv.args[0][2]).to.be.null;
-      expect(parseCsv.args[0][3]).to.be.null;
+      expect(parseCsv.args[0][1]).to.eql({
+        encoding: 'utf8',
+        delimiter: ',',
+        mapping: undefined,
+        transform: undefined,
+        setnull: undefined
+      });
 
       expect(saveCsv.called).to.be.false;
 
@@ -113,14 +143,16 @@ describe(commandName, () => {
     });
 
   let args = defaultArgs.concat(
-    '-i', 'Name',
+    '-i', 'Email',
     '--concurrencymode', 'Serial',
     '--assignmentruleid', 'ruleId',
     '--batchsize', '2',
     '-e', 'cp932',
+    '-d', '\t',
     '-m', 'data/mappings.json',
     '-t', 'data/transformer.js',
     '-w', '10',
+    '--setnull',
     '--save'
   );
   const mapping = {};
@@ -137,9 +169,13 @@ describe(commandName, () => {
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
       expect(parseCsv.calledOnce).to.be.true;
-      expect(parseCsv.args[0][1]).to.eq('cp932');
-      expect(parseCsv.args[0][2]).to.eq(mapping);
-      expect(parseCsv.args[0][3]).to.eq(transform);
+      expect(parseCsv.args[0][1]).to.eql({
+        encoding: 'cp932',
+        delimiter: '\t',
+        setnull: true,
+        mapping,
+        transform
+      });
 
       expect(saveCsv.calledOnce).to.be.true;
       expect(saveCsv.args[0][0]).to.eql('data/Contact.transformed.csv');
@@ -148,7 +184,7 @@ describe(commandName, () => {
       expect(createJob.calledOnce).to.be.true;
       expect(createJob.args[0][0]).to.eq('Contact');
       expect(createJob.args[0][1]).to.eql({
-        extIdField: 'Name',
+        extIdField: 'Email',
         concurrencyMode: 'Serial',
         assignmentRuleId: 'ruleId'
       });
