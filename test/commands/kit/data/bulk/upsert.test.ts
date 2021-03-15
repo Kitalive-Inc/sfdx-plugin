@@ -40,9 +40,9 @@ describe('.parseCsv', () => {
     ]);
   });
 
-  it('with transform', async () => {
+  it('with convert', async () => {
     const rows = await subject(csvStream(), {
-      transform: (row) => {
+      convert: (row) => {
         if (row.col1 === 'col1_2') return null;
 
         return {
@@ -171,15 +171,15 @@ describe(commandName, () => {
     '--assignmentruleid', 'ruleId',
     '--batchsize', '2',
     '-e', 'cp932',
-    '-d', '\t',
+    '-d', ':',
     '-m', 'data/mappings.json',
-    '-t', 'data/transformer.js',
+    '-c', 'data/convert.js',
     '-w', '10',
     '--setnull',
     '--save'
   );
   const mapping = {};
-  const transform = () => [];
+  const convert = () => [];
   const fieldTypes = {};
   testSetup
     .stub(fs, 'readJson', file => {
@@ -187,8 +187,8 @@ describe(commandName, () => {
       return Promise.resolve(mapping)
     })
     .stub(Command.prototype, 'loadScript', file => {
-      expect(file).to.eq('data/transformer.js');
-      return transform;
+      expect(file).to.eq('data/convert.js');
+      return convert;
     })
     .stub(Command.prototype, 'getFieldTypes', (sobject) => fieldTypes)
     .command([commandName].concat(args))
@@ -196,15 +196,15 @@ describe(commandName, () => {
       expect(parseCsv.calledOnce).to.be.true;
       expect(parseCsv.args[0][1]).to.eql({
         encoding: 'cp932',
-        delimiter: '\t',
+        delimiter: ':',
         setnull: true,
         mapping,
-        transform,
+        convert,
         fieldTypes
       });
 
       expect(saveCsv.calledOnce).to.be.true;
-      expect(saveCsv.args[0][0]).to.eql('data/Contact.transformed.csv');
+      expect(saveCsv.args[0][0]).to.eql('data/Contact.converted.csv');
       expect(saveCsv.args[0][1]).to.eql(csvRows);
 
       expect(createJob.calledOnce).to.be.true;
