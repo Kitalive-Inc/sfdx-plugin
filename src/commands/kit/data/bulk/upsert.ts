@@ -1,6 +1,7 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'csv';
+import * as dayjs from 'dayjs';
 import * as fs from 'fs-extra';
 import { decodeStream } from 'iconv-lite';
 import * as path from 'path';
@@ -15,6 +16,17 @@ const logger = require(path.join(ALM_PATH, 'lib/core/logApi'));
 function columnMapper(mapping) {
   const cols = Object.keys(mapping);
   return row => cols.reduce((r, c) => Object.assign(r, { [c]: row[mapping[c]] }), {});
+}
+
+function normalizeDateString(str, format?) {
+  if (!str) return str;
+  const d = dayjs(str);
+  return format ? d.format(format) : d.toISOString();
+}
+
+const converters = {
+  date: (value) => normalizeDateString(value, 'YYYY-MM-DD'),
+  datetime: normalizeDateString
 }
 
 export default class UpsertCommand extends SfdxCommand {
@@ -55,6 +67,7 @@ export default class UpsertCommand extends SfdxCommand {
 
     const mapping = (fieldmapping) ? (await fs.readJson(fieldmapping)) : undefined;
     const transform = transformer ? this.loadScript(transformer) : undefined;
+    const fieldTypes = await this.getFieldTypes(this.flags.object);
 
     this.ux.startSpinner('Processing csv');
     const rows = await this.parseCsv(fs.createReadStream(csvfile), {
@@ -62,7 +75,8 @@ export default class UpsertCommand extends SfdxCommand {
       delimiter,
       setnull,
       mapping,
-      transform
+      transform,
+      fieldTypes
     });
 
     this.ux.stopSpinner();
@@ -97,10 +111,11 @@ export default class UpsertCommand extends SfdxCommand {
       delimiter?: string,
       setnull?: boolean,
       mapping?: JsonMap,
-      transform?: (row: JsonMap) => JsonMap | null | undefined
+      transform?: (row: JsonMap) => JsonMap | null | undefined,
+      fieldTypes?: { [field: string]: string }
     }
   ): Promise<JsonMap[]> {
-    const { encoding, delimiter, setnull, mapping, transform } = options ?? {};
+    const { encoding, delimiter, setnull, mapping, transform, fieldTypes } = options ?? {};
     return new Promise((resolve, reject) => {
       const reader = (!encoding || encoding === 'utf8') ? input : input.pipe(decodeStream(encoding));
       const mapper = mapping ? columnMapper(mapping) : undefined;
@@ -111,12 +126,19 @@ export default class UpsertCommand extends SfdxCommand {
         skip_empty_lines: true,
         skip_lines_with_empty_values: true,
         delimiter,
-        on_record: row => {
+        on_record: (row, { lines }) => { try {
           let result = row;
           if (mapper) result = mapper(result);
           if (transform) {
             result = transform(result);
             if (!result) return;
+          }
+
+          if (fieldTypes) {
+            for (const key of Object.keys(result)) {
+              const converter = converters[fieldTypes[key]];
+              if (converter) result[key] = converter(result[key]);
+            }
           }
 
           if (setnull) {
@@ -127,7 +149,9 @@ export default class UpsertCommand extends SfdxCommand {
           }
           rows.push(result);
           return result;
-        }
+        } catch (e) {
+          throw new Error(`A error occurred in csv file at line ${lines}: ${e.message}`);
+        }}
       });
 
       pipeline(reader, parser, e => e ? reject(e) : resolve(rows));
@@ -149,6 +173,11 @@ export default class UpsertCommand extends SfdxCommand {
     }
     if (!script.transform) throw new Error('function transform is not exported');
     return script.transform;
+  }
+
+  private async getFieldTypes(sobject) {
+    const objectInfo = await this.org.getConnection().describe(sobject);
+    return objectInfo.fields.reduce((info, { name, type }) => Object.assign(info, { [name]: type }), {});
   }
 
   private async createJob(sobject, options) {

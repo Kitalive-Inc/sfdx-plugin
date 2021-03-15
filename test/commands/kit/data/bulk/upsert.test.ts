@@ -76,6 +76,31 @@ describe('.parseCsv', () => {
       { a: 'v1', b: 'v2', c: 'v3' }
     ]);
   });
+
+  it('with fieldTypes', async () => {
+    const rows = await subject(
+      Readable.from([
+        'a,d,t',
+        '2020/1/1,2020/2/2,2020/3/3 4:55',
+        ',202002031200,2020-03-03T12:34:56',
+        ',2020/3,2020-03-03T12:34:56-04:00',
+      ].join('\n')), {
+        fieldTypes: {
+          d: 'date',
+          t: 'datetime'
+        }
+      }
+    );
+
+    const t1 = new Date('2020/3/3 4:55');
+    const t2 = new Date('2020-03-03T12:34:56');
+
+    expect(rows).to.eql([
+      { a: '2020/1/1', d: '2020-02-02', t: t1.toISOString() },
+      { a: '', d: '2020-02-03', t: t2.toISOString() },
+      { a: '', d: '2020-03-01', t: '2020-03-03T16:34:56.000Z' },
+    ]);
+  });
 });
 
 const commandName = 'kit:data:bulk:upsert';
@@ -104,6 +129,7 @@ describe(commandName, () => {
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
     .stub(fs, 'createReadStream', createReadStream)
+    .stub(Command.prototype, 'getFieldTypes', () => {})
     .stub(Command.prototype, 'parseCsv', parseCsv)
     .stub(Command.prototype, 'saveCsv', saveCsv)
     .stub(Command.prototype, 'createJob', createJob)
@@ -117,12 +143,9 @@ describe(commandName, () => {
       expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
       expect(parseCsv.calledOnce).to.be.true;
-      expect(parseCsv.args[0][1]).to.eql({
+      expect(parseCsv.args[0][1]).to.include({
         encoding: 'utf8',
-        delimiter: ',',
-        mapping: undefined,
-        transform: undefined,
-        setnull: undefined
+        delimiter: ','
       });
 
       expect(saveCsv.called).to.be.false;
@@ -157,6 +180,7 @@ describe(commandName, () => {
   );
   const mapping = {};
   const transform = () => [];
+  const fieldTypes = {};
   testSetup
     .stub(fs, 'readJson', file => {
       expect(file).to.eq('data/mappings.json');
@@ -166,6 +190,7 @@ describe(commandName, () => {
       expect(file).to.eq('data/transformer.js');
       return transform;
     })
+    .stub(Command.prototype, 'getFieldTypes', (sobject) => fieldTypes)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
       expect(parseCsv.calledOnce).to.be.true;
@@ -174,7 +199,8 @@ describe(commandName, () => {
         delimiter: '\t',
         setnull: true,
         mapping,
-        transform
+        transform,
+        fieldTypes
       });
 
       expect(saveCsv.calledOnce).to.be.true;
