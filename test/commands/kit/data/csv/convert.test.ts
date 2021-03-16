@@ -147,13 +147,13 @@ describe(commandName, () => {
     });
 
   args = defaultArgs.concat('-c', 'data/convert.js');
-  const loadScript = sinon.spy(file => (row) => ({ field: row.b.toUpperCase() }));
+  const loadConverter = sinon.spy(file => (row) => ({ field: row.b.toUpperCase() }));
   testSetup
-    .stub(Command.prototype, 'loadScript', loadScript)
+    .stub(Command.prototype, 'loadConverter', loadConverter)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
-      expect(loadScript.calledOnce).to.be.true;
-      expect(loadScript.args[0][0]).to.eq('data/convert.js');
+      expect(loadConverter.calledOnce).to.be.true;
+      expect(loadConverter.args[0][0]).to.eq('data/convert.js');
       expect(writeCsv.args[0][0]).to.eql([{field: 'B1'}, {field: 'B2'}]);
     });
 });

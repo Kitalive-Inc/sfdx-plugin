@@ -10,7 +10,7 @@ export default class CsvConvertCommand extends SfdxCommand {
   public static description = 'convert CSV data using column mapping file or Node.js script';
 
   public static examples = [
-    '$ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -m ./path/to/mapping.json',
+    '$ sfdx kit:data:csv:convert -f ./path/to/input.csv -m ./path/to/mapping.json',
     '$ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :'
   ];
 
@@ -30,7 +30,7 @@ export default class CsvConvertCommand extends SfdxCommand {
     const { inputfile, outputfile, mapping, converter, encoding, delimiter } = this.flags;
 
     const mappingJson = mapping ? (await fs.readJson(mapping)) : undefined;
-    const convert = converter ? this.loadScript(converter) : undefined;
+    const convert = converter ? this.loadConverter(converter) : undefined;
 
     const input = inputfile ? fs.createReadStream(inputfile) : process.stdin;
     const rows = await parseCsv(input, {
@@ -52,8 +52,8 @@ export default class CsvConvertCommand extends SfdxCommand {
     csv.stringify(rows, { header: true }).pipe(stream);
   }
 
-  private loadScript(file) {
-    return loadScript(file);
+  private loadConverter(file) {
+    return loadScript(file).convert;
   }
 }
 
@@ -92,15 +92,9 @@ export async function parseCsv(
 }
 
 export function loadScript(file) {
-  let script;
-  try {
-    script = require(path.resolve(file));
-  } catch (e) {
-    this.ux.error(e);
-    throw e;
-  }
+  const script = require(path.resolve(file));
   if (!script.convert) throw new Error('function convert is not exported');
-  return script.convert;
+  return script;
 }
 
 export function columnMapper(mapping) {

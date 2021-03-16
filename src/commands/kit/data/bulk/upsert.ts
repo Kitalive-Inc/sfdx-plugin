@@ -52,7 +52,8 @@ export default class UpsertCommand extends SfdxCommand {
     mapping: csvFlags.mapping,
     converter: csvFlags.converter,
     setnull: flags.boolean({ description: 'set blank values as null values during upsert operations (default: empty field values are ignored)' }),
-    save: flags.boolean({ description: 'output converted.csv file for debugging' }),
+    save: flags.boolean({ description: 'output converted.csv file' }),
+    saveonly: flags.boolean({ description: 'output converted.csv file and skip upsert for debugging' }),
     // job settings
     concurrencymode: flags.string({ default: 'Parallel', description: 'the concurrency mode (Parallel or Serial) for the job' }),
     assignmentruleid: flags.string({ description: 'the ID of a specific assignment rule to run for a case or a lead.' }),
@@ -64,24 +65,33 @@ export default class UpsertCommand extends SfdxCommand {
     const { csvfile, mapping, converter, encoding, delimiter, setnull } = this.flags;
 
     const mappingJson = (mapping) ? (await fs.readJson(mapping)) : undefined;
-    const convert = converter ? this.loadScript(converter) : undefined;
+    const script = converter ? this.loadScript(converter) : {};
     const fieldTypes = await this.getFieldTypes(this.flags.object);
 
     this.ux.startSpinner('Processing csv');
-    const rows = await this.parseCsv(fs.createReadStream(csvfile), {
+
+    if (script.start) await script.start(this);
+
+    let rows = await this.parseCsv(fs.createReadStream(csvfile), {
       encoding,
       delimiter,
       setnull,
       mapping: mappingJson,
-      convert,
+      convert: script.convert,
       fieldTypes
     });
 
+    if (script.finish) {
+      const result = await script.finish(rows, this);
+      if (result) rows = result;
+    }
+
     this.ux.stopSpinner();
 
-    if (this.flags.save) {
+    if (this.flags.save || this.flags.saveonly) {
       const base = path.basename(csvfile, path.extname(csvfile));
       this.saveCsv(path.join(path.dirname(csvfile), base + '.converted.csv'), rows);
+      if (this.flags.saveonly) return;
     }
 
     this.ux.startSpinner('Bulk Upsert');

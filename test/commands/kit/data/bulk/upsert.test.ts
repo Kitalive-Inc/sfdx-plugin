@@ -126,10 +126,11 @@ describe(commandName, () => {
     createAndExecuteBatches.resetHistory();
   });
 
+  const fieldTypes = {};
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
     .stub(fs, 'createReadStream', createReadStream)
-    .stub(Command.prototype, 'getFieldTypes', () => {})
+    .stub(Command.prototype, 'getFieldTypes', () => fieldTypes)
     .stub(Command.prototype, 'parseCsv', parseCsv)
     .stub(Command.prototype, 'saveCsv', saveCsv)
     .stub(Command.prototype, 'createJob', createJob)
@@ -180,7 +181,6 @@ describe(commandName, () => {
   );
   const mapping = {};
   const convert = () => [];
-  const fieldTypes = {};
   testSetup
     .stub(fs, 'readJson', file => {
       expect(file).to.eq('data/mappings.json');
@@ -188,9 +188,8 @@ describe(commandName, () => {
     })
     .stub(Command.prototype, 'loadScript', file => {
       expect(file).to.eq('data/convert.js');
-      return convert;
+      return { convert };
     })
-    .stub(Command.prototype, 'getFieldTypes', (sobject) => fieldTypes)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
       expect(parseCsv.calledOnce).to.be.true;
@@ -219,5 +218,17 @@ describe(commandName, () => {
       expect(createAndExecuteBatches.args[0][2]).to.eql([[csvRows[0], csvRows[1]], [csvRows[2]]]);
       expect(createAndExecuteBatches.args[0][3]).to.eq('Contact');
       expect(createAndExecuteBatches.args[0][4]).to.eq(10);
+    });
+
+  const start = sinon.spy();
+  const finish = sinon.spy();
+  testSetup
+    .stub(Command.prototype, 'loadScript', file => {
+      return { convert, start, finish };
+    })
+    .command([commandName].concat(defaultArgs, '-c', 'data/converter.js'))
+    .it('called converters hooks', ctx => {
+      expect(start.called).to.be.true;
+      expect(finish.called).to.be.true;
     });
 });
