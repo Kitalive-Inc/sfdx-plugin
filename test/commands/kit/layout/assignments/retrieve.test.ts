@@ -36,7 +36,7 @@ describe('kit:layout:assignments:retrieve', () => {
     }
   ];
 
-  const objectNamesFromLayouts = spy(Command.prototype, 'objectNamesFromLayouts');
+  const objectNamesFromLayouts = spy(Command.prototype, 'objectNamesFromLayouts') as any;
 
   const findFiles = spy(pattern => Promise.resolve([
     'force-app/ext/layouts/Opportunity-Opportunity Layout1.layout-meta.xml',
@@ -44,7 +44,7 @@ describe('kit:layout:assignments:retrieve', () => {
     'force-app/main/default/layouts/Account-Account Layout1.layout-meta.xml',
     'force-app/main/default/layouts/Account-Account Layout2.layout-meta.xml',
     'force-app/main/default/layouts/Contact-Contact Layout.layout-meta.xml'
-  ]));
+  ])) as any;
 
   const getProfileNames = spy(() => {
     const names = [];
@@ -52,17 +52,17 @@ describe('kit:layout:assignments:retrieve', () => {
       names.push('profile' + i);
     }
     return Promise.resolve(names);
-  });
+  }) as any;
 
   const getProfiles = spy(names => Promise.resolve(
     names.map(fullName => ({ fullName, layoutAssignments }))
-  ));
+  )) as any;
 
   const readFile = spy(file => Promise.resolve({
     Admin: [{ layout: 'Account-Account Layout.layout-meta.xml' }]
-  }));
+  })) as any;
 
-  const writeFile = spy((file, data) => Promise.resolve());
+  const writeFile = spy((file, data) => Promise.resolve()) as any;
 
   afterEach(() => {
     objectNamesFromLayouts.resetHistory();

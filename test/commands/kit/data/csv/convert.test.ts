@@ -1,6 +1,6 @@
 import { expect, test } from '@salesforce/command/lib/test';
 import { assert } from 'chai';
-import * as csv from 'csv';
+import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import { encodeStream } from 'iconv-lite';
 import * as sinon from 'sinon';
@@ -16,7 +16,7 @@ describe('parseCsv', () => {
     { col1: 'col1_3', col2: 'col2_3', col3: 'col3_3' }
   ];
 
-  const csvStream = () => csv.stringify(csvRows, { header: true });
+  const csvStream = () => csv.write(csvRows, { headers: true });
 
   it('with no options', async () => {
     const rows = await parseCsv(csvStream());
@@ -96,10 +96,10 @@ describe(commandName, () => {
     { 'a': 'a2', b: 'b2', c: 'c2' }
   ];
 
-  const createReadStream = sinon.spy(file => csv.stringify(csvRows, { header: true }));
-  const createWriteStream = sinon.spy(file => {});
-  const writeCsv = sinon.spy((rows, stream) => {});
-  const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
+  const createReadStream = sinon.spy(file => csv.write(csvRows, { headers: true })) as any;
+  const createWriteStream = sinon.spy(file => {}) as any;
+  const writeCsv = sinon.spy((rows, stream) => {}) as any;
+  const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows)) as any;
 
   afterEach(() => {
     createReadStream.resetHistory();
@@ -114,7 +114,7 @@ describe(commandName, () => {
     .stub(Command.prototype, 'writeCsv', writeCsv)
     .stdout();
 
-  const stdin = sinon.spy(() => csv.stringify(csvRows, { header: true }));
+  const stdin = sinon.spy(() => csv.write(csvRows, { headers: true })) as any;
   testSetup
     .stub(process, 'stdin', stdin)
     .command([commandName])
@@ -136,7 +136,7 @@ describe(commandName, () => {
     });
 
   let args = defaultArgs.concat('-m', 'data/mapping.json');
-  const readJson = sinon.spy(file => ({field: 'b'}));
+  const readJson = sinon.spy(file => ({field: 'b'})) as any;
   testSetup
     .stub(fs, 'readJson', readJson)
     .command([commandName].concat(args))
@@ -147,7 +147,7 @@ describe(commandName, () => {
     });
 
   args = defaultArgs.concat('-c', 'data/convert.js');
-  const loadConverter = sinon.spy(file => (row) => ({ field: row.b.toUpperCase() }));
+  const loadConverter = sinon.spy(file => (row) => ({ field: row.b.toUpperCase() })) as any;
   testSetup
     .stub(Command.prototype, 'loadConverter', loadConverter)
     .command([commandName].concat(args))

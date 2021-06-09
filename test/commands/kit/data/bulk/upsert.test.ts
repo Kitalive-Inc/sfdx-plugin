@@ -1,13 +1,10 @@
 import { expect, test } from '@salesforce/command/lib/test';
-import * as csv from 'csv';
+import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
-import * as path from 'path';
 import * as sinon from 'sinon';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
 
 const { Readable } = require('stream');
-const ALM_PATH = path.dirname(require.resolve('salesforce-alm'));
-const dataBulk= require(path.join(ALM_PATH, 'lib/data/dataBulkUpsertCommand'));
 
 describe('.parseCsv', () => {
   const subject = Command.prototype.parseCsv;
@@ -18,7 +15,7 @@ describe('.parseCsv', () => {
     { col1: 'col1_3', col2: 'col2_3', col3: 'col3_3' }
   ];
 
-  const csvStream = () => csv.stringify(csvRows, { header: true });
+  const csvStream = () => csv.write(csvRows, { headers: true });
 
   it('with no options', async () => {
     const rows = await subject(csvStream());
@@ -112,18 +109,18 @@ describe(commandName, () => {
   ];
 
   const job = {};
-  const createReadStream = sinon.spy(file => csv.stringify(csvRows));
+  const createReadStream = sinon.spy(file => csv.write(csvRows)) as any;
   const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
   const saveCsv = sinon.spy();
-  const createJob = sinon.spy((sobject, options) => Promise.resolve(job));
-  const createAndExecuteBatches = sinon.spy((...args) => Promise.resolve());
+  const createJob = sinon.spy((sobject, options) => Promise.resolve(job)) as any;
+  const executeBatches = sinon.spy((...args) => Promise.resolve());
 
   afterEach(() => {
     createReadStream.resetHistory();
     parseCsv.resetHistory();
     saveCsv.resetHistory();
     createJob.resetHistory();
-    createAndExecuteBatches.resetHistory();
+    executeBatches.resetHistory();
   });
 
   const fieldTypes = {};
@@ -134,7 +131,7 @@ describe(commandName, () => {
     .stub(Command.prototype, 'parseCsv', parseCsv)
     .stub(Command.prototype, 'saveCsv', saveCsv)
     .stub(Command.prototype, 'createJob', createJob)
-    .stub(dataBulk, 'createAndExecuteBatches', createAndExecuteBatches)
+    .stub(Command.prototype, 'executeBatches', executeBatches)
     .stdout();
 
   const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
@@ -159,11 +156,11 @@ describe(commandName, () => {
         assignmentRuleId: undefined
       });
 
-      expect(createAndExecuteBatches.calledOnce).to.be.true;
-      expect(createAndExecuteBatches.args[0][1]).to.eq(job);
-      expect(createAndExecuteBatches.args[0][2]).to.eql([csvRows]);
-      expect(createAndExecuteBatches.args[0][3]).to.eq('Contact');
-      expect(createAndExecuteBatches.args[0][4]).to.be.undefined;
+      expect(executeBatches.calledOnce).to.be.true;
+      expect(executeBatches.args[0][0]).to.eq(job);
+      expect(executeBatches.args[0][1]).to.eql([csvRows]);
+      expect(executeBatches.args[0][2]).to.eq('Contact');
+      expect(executeBatches.args[0][3]).to.be.undefined;
     });
 
   let args = defaultArgs.concat(
@@ -182,14 +179,14 @@ describe(commandName, () => {
   const mapping = {};
   const convert = () => [];
   testSetup
-    .stub(fs, 'readJson', file => {
+    .stub(fs, 'readJson', (file => {
       expect(file).to.eq('data/mappings.json');
       return Promise.resolve(mapping)
-    })
-    .stub(Command.prototype, 'loadScript', file => {
+    }) as any)
+    .stub(Command.prototype, 'loadScript', (file => {
       expect(file).to.eq('data/convert.js');
       return { convert };
-    })
+    }) as any)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
       expect(parseCsv.calledOnce).to.be.true;
@@ -213,19 +210,19 @@ describe(commandName, () => {
         concurrencyMode: 'Serial',
         assignmentRuleId: 'ruleId'
       });
-      expect(createAndExecuteBatches.calledOnce).to.be.true;
-      expect(createAndExecuteBatches.args[0][1]).to.eq(job);
-      expect(createAndExecuteBatches.args[0][2]).to.eql([[csvRows[0], csvRows[1]], [csvRows[2]]]);
-      expect(createAndExecuteBatches.args[0][3]).to.eq('Contact');
-      expect(createAndExecuteBatches.args[0][4]).to.eq(10);
+      expect(executeBatches.calledOnce).to.be.true;
+      expect(executeBatches.args[0][0]).to.eq(job);
+      expect(executeBatches.args[0][1]).to.eql([[csvRows[0], csvRows[1]], [csvRows[2]]]);
+      expect(executeBatches.args[0][2]).to.eq('Contact');
+      expect(executeBatches.args[0][3]).to.eq(10);
     });
 
   const start = sinon.spy();
   const finish = sinon.spy();
   testSetup
-    .stub(Command.prototype, 'loadScript', file => {
+    .stub(Command.prototype, 'loadScript', (file => {
       return { convert, start, finish };
-    })
+    }) as any)
     .command([commandName].concat(defaultArgs, '-c', 'data/converter.js'))
     .it('called converters hooks', ctx => {
       expect(start.called).to.be.true;

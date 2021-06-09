@@ -1,7 +1,8 @@
 import { flags, SfdxCommand } from '@salesforce/command';
+import { Batcher } from '@salesforce/plugin-data/lib/batcher.js';
 import { JsonMap } from '@salesforce/ts-types';
-import * as csv from 'csv';
 import * as dayjs from 'dayjs';
+import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { Readable } from 'stream';
@@ -9,10 +10,8 @@ import { chunk } from '../../../../utils';
 import CsvConvertCommand from '../csv/convert';
 import { loadScript, parseCsv } from '../csv/convert';
 
-/* tslint:disable:no-var-requires */
-const ALM_PATH = path.dirname(require.resolve('salesforce-alm'));
-const dataBulk = require(path.join(ALM_PATH, 'lib/data/dataBulkUpsertCommand'));
-const logger = require(path.join(ALM_PATH, 'lib/core/logApi'));
+// monkey patch
+Batcher.prototype['splitIntoBatches'] = arg => arg;
 
 function normalizeDateString(str, format?) {
   if (!str) return str;
@@ -61,7 +60,7 @@ export default class UpsertCommand extends SfdxCommand {
     wait: flags.integer({ char: 'w', min: 0, description: 'the number of minutes to wait for the command to complete before displaying the results' })
   };
 
-  public async run(): Promise<JsonMap> {
+  public async run(): Promise<JsonMap[]> {
     const { csvfile, mapping, converter, encoding, delimiter, setnull } = this.flags;
 
     const mappingJson = (mapping) ? (await fs.readJson(mapping)) : undefined;
@@ -103,9 +102,8 @@ export default class UpsertCommand extends SfdxCommand {
       });
 
       const batches = chunk(rows, this.flags.batchsize);
-      logger.setHumanConsumable(!this.flags.json);
-      const result = await dataBulk.createAndExecuteBatches(this.org.getConnection(), job, batches, this.flags.object, this.flags.wait);
-      return result;
+      const result = await this.executeBatches(job, batches, this.flags.object, this.flags.wait);
+      return result as JsonMap[];
     } catch (e) {
       this.ux.stopSpinner('error');
       throw e;
@@ -126,6 +124,7 @@ export default class UpsertCommand extends SfdxCommand {
     const { encoding, delimiter, mapping, convert, setnull, fieldTypes } = options ?? {};
     return await parseCsv(input, { encoding, delimiter, mapping, convert: row => {
       const result = convert ? convert(row) : row;
+      if (!result) return;
       if (fieldTypes) {
         for (const key of Object.keys(result)) {
           const converter = converters[fieldTypes[key]];
@@ -142,9 +141,13 @@ export default class UpsertCommand extends SfdxCommand {
     }});
   }
 
+  private executeBatches(job, batches, object, wait) {
+    const batcher = new Batcher(this.org.getConnection(), this.ux);
+    return batcher.createAndExecuteBatches(job, batches, object, wait);
+  }
+
   private saveCsv(file, rows) {
-    csv.stringify(rows, { header: true })
-      .pipe(fs.createWriteStream(file));
+    csv.writeToPath(file, rows, { headers: true });
   }
 
   private loadScript(file) {
@@ -152,12 +155,14 @@ export default class UpsertCommand extends SfdxCommand {
   }
 
   private async getFieldTypes(sobject) {
-    const objectInfo = await this.org.getConnection().describe(sobject);
+    const conn = this.org.getConnection();
+    const objectInfo = await conn['describe'](sobject);
     return objectInfo.fields.reduce((info, { name, type }) => Object.assign(info, { [name]: type }), {});
   }
 
   private async createJob(sobject, options) {
-    const job = this.org.getConnection().bulk.createJob(sobject, 'upsert', options);
+    const conn = this.org.getConnection();
+    const job = conn['bulk'].createJob(sobject, 'upsert', options);
     await job.on('error', e => { throw e; }).open();
     return job;
   }

@@ -14,8 +14,8 @@ describe('kit:layout:assignments:deploy', () => {
     ]
   };
 
-  const readFile = spy(file => config);
-  const deploy = spy(data => Promise.resolve({}));
+  const readFile = spy(file => config) as any;
+  const deploy = spy(data => Promise.resolve({})) as any;
 
   afterEach(() => {
     readFile.resetHistory();
@@ -47,7 +47,7 @@ describe('kit:layout:assignments:deploy', () => {
 
 
   t
-    .stub(Command.prototype, 'readFile', (file) => {
+    .stub(Command.prototype, 'readFile', ((file) => {
       const result = {};
       for (let i = 1; i <= 35; i++) {
         result['profile' + i] = [
@@ -56,7 +56,7 @@ describe('kit:layout:assignments:deploy', () => {
         ];
       }
       return result;
-    })
+    }) as any)
     .command(['kit:layout:assignments:deploy'])
     .it('update 10 profiles per one API call', ctx => {
       expect(deploy.callCount).to.eq(4);

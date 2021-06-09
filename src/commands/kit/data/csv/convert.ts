@@ -1,6 +1,6 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import { JsonMap } from '@salesforce/ts-types';
-import * as csv from 'csv';
+import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import { decodeStream } from 'iconv-lite';
 import * as path from 'path';
@@ -49,7 +49,7 @@ export default class CsvConvertCommand extends SfdxCommand {
   }
 
   private writeCsv(rows, stream) {
-    csv.stringify(rows, { header: true }).pipe(stream);
+    csv.writeToStream(stream, rows, { headers: true });
   }
 
   private loadConverter(file) {
@@ -57,7 +57,7 @@ export default class CsvConvertCommand extends SfdxCommand {
   }
 }
 
-export async function parseCsv(
+export function parseCsv(
   input: Readable,
   options?: {
     encoding?: string,
@@ -68,26 +68,31 @@ export async function parseCsv(
 ): Promise<JsonMap[]> {
   const { encoding, delimiter, mapping, convert } = options ?? {};
   return new Promise((resolve, reject) => {
-    const reader = (!encoding || encoding === 'utf8') ? input : input.pipe(decodeStream(encoding));
     const mapper = mapping ? columnMapper(mapping) : undefined;
 
+    let lines = 2;
     const rows = [];
     const parser = csv.parse({
-      columns: true,
-      skip_empty_lines: true,
-      skip_lines_with_empty_values: true,
-      delimiter: delimiter === '\\t' ? '\t' : delimiter,
-      on_record: (row, { lines }) => { try {
+      headers: true,
+      ignoreEmpty: true,
+      delimiter: delimiter === '\\t' ? '\t' : (delimiter || ',')
+    }).on('data', row => {
+      try {
         if (mapper) row = mapper(row);
         if (convert) row = convert(row);
         if (row) rows.push(row);
-        return row;
+        lines++;
       } catch (e) {
         throw new Error(`A error occurred in csv file at line ${lines}: ${e.message}\ndata: ${JSON.stringify(row)}`);
-      }}
+      }
     });
 
-    pipeline(reader, parser, e => e ? reject(e) : resolve(rows));
+    const callback = e => e ? reject(e) : resolve(rows);
+    if (!encoding || encoding === 'utf8') {
+      pipeline(input, parser, callback);
+    } else {
+      pipeline(input, decodeStream(encoding), parser, callback);
+    }
   });
 }
 

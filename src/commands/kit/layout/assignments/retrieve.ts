@@ -66,11 +66,11 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
   }
 
   private getProfileNames(): Promise<string[]> {
-    return this.org.getConnection().metadata.list({ type: 'Profile' }).then(profiles => profiles.map(p => p.fullName));
+    return this.org.getConnection()['metadata'].list({ type: 'Profile' }).then(profiles => profiles.map(p => p.fullName));
   }
 
   private getProfiles(names: string[]): Promise<ProfileMetadata[]> {
-    return this.org.getConnection().metadata.read('Profile', names) as Promise<ProfileMetadata[]>;
+    return this.org.getConnection()['metadata'].read('Profile', names) as Promise<ProfileMetadata[]>;
   }
 
   private findFiles(pattern: string): Promise<string[]> {
