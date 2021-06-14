@@ -156,13 +156,13 @@ export default class UpsertCommand extends SfdxCommand {
 
   private async getFieldTypes(sobject) {
     const conn = this.org.getConnection();
-    const objectInfo = await conn['describe'](sobject);
+    const objectInfo = await conn.describe(sobject);
     return objectInfo.fields.reduce((info, { name, type }) => Object.assign(info, { [name]: type }), {});
   }
 
   private async createJob(sobject, options) {
     const conn = this.org.getConnection();
-    const job = conn['bulk'].createJob(sobject, 'upsert', options);
+    const job = conn.bulk.createJob(sobject, 'upsert', options);
     await job.on('error', e => { throw e; }).open();
     return job;
   }

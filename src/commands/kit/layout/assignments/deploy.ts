@@ -35,6 +35,6 @@ export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
   }
 
   private deploy(data: ProfileMetadata[]) {
-    return this.org.getConnection()['metadata'].update('Profile', data);
+    return this.org.getConnection().metadata.update('Profile', data);
   }
 }
