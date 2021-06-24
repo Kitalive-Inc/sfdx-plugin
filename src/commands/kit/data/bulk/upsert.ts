@@ -48,6 +48,9 @@ export default class UpsertCommand extends SfdxCommand {
     csvfile: flags.filepath({ char: 'f', required: true, description: 'the path of the CSV file that defines the records to upsert' }),
     encoding: csvFlags.encoding,
     delimiter: csvFlags.delimiter,
+    quote: csvFlags.quote,
+    skiplines: csvFlags.skiplines,
+    trim: csvFlags.trim,
     mapping: csvFlags.mapping,
     converter: csvFlags.converter,
     setnull: flags.boolean({ description: 'set blank values as null values during upsert operations (default: empty field values are ignored)' }),
@@ -61,7 +64,7 @@ export default class UpsertCommand extends SfdxCommand {
   };
 
   public async run(): Promise<JsonMap[]> {
-    const { csvfile, mapping, converter, encoding, delimiter, setnull } = this.flags;
+    const { csvfile, mapping, converter, encoding, delimiter, quote, skiplines, trim, setnull } = this.flags;
 
     const mappingJson = (mapping) ? (await fs.readJson(mapping)) : undefined;
     const script = converter ? this.loadScript(converter) : {};
@@ -74,6 +77,9 @@ export default class UpsertCommand extends SfdxCommand {
     let rows = await this.parseCsv(fs.createReadStream(csvfile), {
       encoding,
       delimiter,
+      quote,
+      skiplines,
+      trim: !!trim,
       setnull,
       mapping: mappingJson,
       convert: script.convert,
@@ -115,14 +121,17 @@ export default class UpsertCommand extends SfdxCommand {
     options?: {
       encoding?: string,
       delimiter?: string,
+      quote?: string,
+      skiplines?: number,
+      trim?: boolean,
       setnull?: boolean,
       mapping?: JsonMap,
       convert?: (row: JsonMap) => JsonMap | null | undefined,
       fieldTypes?: { [field: string]: string }
     }
   ): Promise<JsonMap[]> {
-    const { encoding, delimiter, mapping, convert, setnull, fieldTypes } = options ?? {};
-    return await parseCsv(input, { encoding, delimiter, mapping, convert: row => {
+    const { encoding, delimiter, quote, skiplines, trim, mapping, convert, setnull, fieldTypes } = options ?? {};
+    return await parseCsv(input, { encoding, delimiter, quote, skiplines, trim, mapping, convert: row => {
       const result = convert ? convert(row) : row;
       if (!result) return;
       if (fieldTypes) {

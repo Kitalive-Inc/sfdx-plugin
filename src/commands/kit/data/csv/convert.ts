@@ -22,12 +22,15 @@ export default class CsvConvertCommand extends SfdxCommand {
     outputfile: flags.filepath({ char: 'o', description: 'the path of the output CSV file (default: standard output)' }),
     encoding: flags.string({ char: 'e', default: 'utf8', description: 'the input CSV file encoding' }),
     delimiter: flags.string({ char: 'd', default: ',', description: 'the input CSV file delimiter' }),
+    quote: flags.string({ char: 'q', default: '"', description: 'the input CSV file quote character' }),
+    skiplines: flags.integer({ default: 0, description: 'the number of lines to skip' }),
+    trim: flags.boolean({ description: 'trim all white space from columns' }),
     mapping: flags.filepath({ char: 'm', description: 'the path of the JSON file that defines CSV column mappings' }),
     converter: flags.filepath({ char: 'c', description: 'the path of the script to convert CSV rows' })
   };
 
   public async run(): Promise<JsonMap[]> {
-    const { inputfile, outputfile, mapping, converter, encoding, delimiter } = this.flags;
+    const { inputfile, outputfile, mapping, converter, encoding, delimiter, quote, skiplines, trim } = this.flags;
 
     const mappingJson = mapping ? (await fs.readJson(mapping)) : undefined;
     const convert = converter ? this.loadConverter(converter) : undefined;
@@ -36,6 +39,9 @@ export default class CsvConvertCommand extends SfdxCommand {
     const rows = await parseCsv(input, {
       encoding,
       delimiter,
+      quote,
+      skiplines,
+      trim,
       mapping: mappingJson,
       convert
     });
@@ -62,11 +68,14 @@ export function parseCsv(
   options?: {
     encoding?: string,
     delimiter?: string,
+    quote?: string,
+    skiplines?: number,
+    trim?: boolean,
     mapping?: JsonMap,
     convert?: (row: JsonMap) => JsonMap | null | undefined
   }
 ): Promise<JsonMap[]> {
-  const { encoding, delimiter, mapping, convert } = options ?? {};
+  const { encoding, delimiter, quote, skiplines, trim, mapping, convert } = options ?? {};
   return new Promise((resolve, reject) => {
     const mapper = mapping ? columnMapper(mapping) : undefined;
 
@@ -75,7 +84,10 @@ export function parseCsv(
     const parser = csv.parse({
       headers: true,
       ignoreEmpty: true,
-      delimiter: delimiter === '\\t' ? '\t' : (delimiter || ',')
+      delimiter: delimiter === '\\t' ? '\t' : (delimiter || ','),
+      quote: quote ?? '"',
+      skipLines: skiplines,
+      trim
     }).on('data', row => {
       try {
         if (mapper) row = mapper(row);

@@ -78,6 +78,36 @@ describe('parseCsv', () => {
     ]);
   });
 
+  it('with quote', async () => {
+    const rows = await parseCsv(
+      Readable.from(`a,b,c,d\n'1,2',3,"4,5"`),
+      { quote: "'" }
+    );
+    expect(rows).to.eql([
+      { a: '1,2', b: '3', c: '"4', d: '5"' }
+    ]);
+  });
+
+  it('with skiplines', async () => {
+    const rows = await parseCsv(
+      Readable.from(`skip1,skip2\na,b\n1,2`),
+      { skiplines: 1 }
+    );
+    expect(rows).to.eql([
+      { a: '1', b: '2' }
+    ]);
+  });
+
+  it('with trim', async () => {
+    const rows = await parseCsv(
+      Readable.from(`a,b\n 1\t ,   2`),
+      { trim: true }
+    );
+    expect(rows).to.eql([
+      { a: '1', b: '2' }
+    ]);
+  });
+
   it('with encoding', async () => {
     const rows = await parseCsv(
       Readable.from('col1,col2\n値1,値2').pipe(encodeStream('cp932')),

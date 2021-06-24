@@ -74,6 +74,36 @@ describe('.parseCsv', () => {
     ]);
   });
 
+  it('with quote', async () => {
+    const rows = await subject(
+      Readable.from(`a,b,c,d\n'1,2',3,"4,5"`),
+      { quote: "'" }
+    );
+    expect(rows).to.eql([
+      { a: '1,2', b: '3', c: '"4', d: '5"' }
+    ]);
+  });
+
+  it('with skiplines', async () => {
+    const rows = await subject(
+      Readable.from(`skip1,skip2\na,b\n1,2`),
+      { skiplines: 1 }
+    );
+    expect(rows).to.eql([
+      { a: '1', b: '2' }
+    ]);
+  });
+
+  it('with trim', async () => {
+    const rows = await subject(
+      Readable.from(`a,b\n 1\t ,   2`),
+      { trim: true }
+    );
+    expect(rows).to.eql([
+      { a: '1', b: '2' }
+    ]);
+  });
+
   it('with fieldTypes', async () => {
     const rows = await subject(
       Readable.from([
@@ -193,6 +223,9 @@ describe(commandName, () => {
       expect(parseCsv.args[0][1]).to.eql({
         encoding: 'cp932',
         delimiter: ':',
+        quote: '"',
+        skiplines: 0,
+        trim: false,
         setnull: true,
         mapping,
         convert,
