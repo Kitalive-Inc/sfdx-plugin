@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sfdx COMMAND
 running command...
 $ sfdx (-v|--version|version)
-@kitalive/sfdx-plugin/0.1.3 darwin-x64 node-v14.15.0
+@kitalive/sfdx-plugin/0.1.4 darwin-x64 node-v16.12.0
 $ sfdx --help [COMMAND]
 USAGE
   $ sfdx COMMAND
@@ -29,12 +29,12 @@ USAGE
 ## Commands
 
 <!-- commands -->
-* [`sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--save] [--saveonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkupsert--o-string--i-string--f-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---save---saveonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkupsert--o-string--i-string--f-filepath--r-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---convertonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatacsvconvert--f-filepath--o-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitlayoutassignmentsdeploy--f-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitlayoutassignmentsretrieve--f-string--p-string--o-string---merge--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 
-## `sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--save] [--saveonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+## `sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk upsert records from a CSV file
 
@@ -44,10 +44,10 @@ Upsert records using Bulk API and returns a job ID and a batch ID. Use these IDs
 For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
 
 USAGE
-  $ sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-e <string>] [-d <string>] [-q <string>] 
-  [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--save] [--saveonly] [--concurrencymode 
-  <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] 
-  [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+  $ sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q 
+  <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] 
+  [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion 
+  <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
 
 OPTIONS
   -c, --converter=converter                                                         the path of the script to convert
@@ -59,8 +59,8 @@ OPTIONS
   -e, --encoding=encoding                                                           [default: utf8] the input CSV file
                                                                                     encoding
 
-  -f, --csvfile=csvfile                                                             (required) the path of the CSV file
-                                                                                    that defines the records to upsert
+  -f, --csvfile=csvfile                                                             (required) the CSV file path that
+                                                                                    defines the records to upsert
 
   -i, --externalid=externalid                                                       (required) [default: Id] the column
                                                                                     name of the external ID
@@ -73,6 +73,9 @@ OPTIONS
 
   -q, --quote=quote                                                                 [default: "] the input CSV file
                                                                                     quote character
+
+  -r, --resultfile=resultfile                                                       the CSV file path for writing the
+                                                                                    upsert results
 
   -s, --batchsize=batchsize                                                         [default: 10000] the batch size of
                                                                                     the job
@@ -94,15 +97,13 @@ OPTIONS
                                                                                     mode (Parallel or Serial) for the
                                                                                     job
 
+  --convertonly                                                                     output converted.csv file and skip
+                                                                                    upsert for debugging
+
   --json                                                                            format output as json
 
   --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
                                                                                     this command invocation
-
-  --save                                                                            output converted.csv file
-
-  --saveonly                                                                        output converted.csv file and skip
-                                                                                    upsert for debugging
 
   --setnull                                                                         set blank values as null values
                                                                                     during upsert operations (default:
@@ -125,7 +126,7 @@ EXAMPLES
   10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.3/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.4/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -175,7 +176,7 @@ EXAMPLES
   $ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.3/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.4/src/commands/kit/data/csv/convert.ts)_
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -210,7 +211,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.3/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.4/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -256,5 +257,5 @@ EXAMPLES
   $ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.3/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.4/src/commands/kit/layout/assignments/retrieve.ts)_
 <!-- commandsstop -->
