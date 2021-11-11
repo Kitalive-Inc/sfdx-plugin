@@ -1,17 +1,14 @@
 import { flags, SfdxCommand } from '@salesforce/command';
-import { Batcher } from '@salesforce/plugin-data/lib/batcher.js';
 import { JsonMap } from '@salesforce/ts-types';
 import * as dayjs from 'dayjs';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
+import { BatchResultInfo } from 'jsforce';
 import * as path from 'path';
 import { Readable } from 'stream';
 import { chunk } from '../../../../utils';
 import CsvConvertCommand from '../csv/convert';
 import { loadScript, parseCsv } from '../csv/convert';
-
-// monkey patch
-Batcher.prototype['splitIntoBatches'] = arg => arg;
 
 function normalizeDateString(str, format?) {
   if (!str) return str;
@@ -45,7 +42,8 @@ export default class UpsertCommand extends SfdxCommand {
     object: flags.string({ char: 'o', required: true, description: 'the sObject name to upsert' }),
     externalid: flags.string({ char: 'i', required: true, default: 'Id', description: 'the column name of the external ID' }),
     // csv settings
-    csvfile: flags.filepath({ char: 'f', required: true, description: 'the path of the CSV file that defines the records to upsert' }),
+    csvfile: flags.filepath({ char: 'f', required: true, description: 'the CSV file path that defines the records to upsert' }),
+    resultfile: flags.filepath({ char: 'r', description: 'the CSV file path for writing the upsert results' }),
     encoding: csvFlags.encoding,
     delimiter: csvFlags.delimiter,
     quote: csvFlags.quote,
@@ -54,8 +52,7 @@ export default class UpsertCommand extends SfdxCommand {
     mapping: csvFlags.mapping,
     converter: csvFlags.converter,
     setnull: flags.boolean({ description: 'set blank values as null values during upsert operations (default: empty field values are ignored)' }),
-    save: flags.boolean({ description: 'output converted.csv file' }),
-    saveonly: flags.boolean({ description: 'output converted.csv file and skip upsert for debugging' }),
+    convertonly: flags.boolean({ description: 'output converted.csv file and skip upsert for debugging' }),
     // job settings
     concurrencymode: flags.string({ default: 'Parallel', description: 'the concurrency mode (Parallel or Serial) for the job' }),
     assignmentruleid: flags.string({ description: 'the ID of a specific assignment rule to run for a case or a lead.' }),
@@ -63,7 +60,7 @@ export default class UpsertCommand extends SfdxCommand {
     wait: flags.integer({ char: 'w', min: 0, description: 'the number of minutes to wait for the command to complete before displaying the results' })
   };
 
-  public async run(): Promise<JsonMap[]> {
+  public async run(): Promise<JsonMap> {
     const { csvfile, mapping, converter, encoding, delimiter, quote, skiplines, trim, setnull } = this.flags;
 
     const mappingJson = (mapping) ? (await fs.readJson(mapping)) : undefined;
@@ -93,26 +90,66 @@ export default class UpsertCommand extends SfdxCommand {
 
     this.ux.stopSpinner();
 
-    if (this.flags.save || this.flags.saveonly) {
+    if (this.flags.convertonly) {
       const base = path.basename(csvfile, path.extname(csvfile));
       this.saveCsv(path.join(path.dirname(csvfile), base + '.converted.csv'), rows);
-      if (this.flags.saveonly) return;
+      return;
     }
 
     this.ux.startSpinner('Bulk Upsert');
+    let job;
     try {
-      const job = await this.createJob(this.flags.object, {
+      job = await this.createJob(this.flags.object, {
         extIdField: this.flags.externalid,
         concurrencyMode: this.flags.concurrencymode,
         assignmentRuleId: this.flags.assignmentruleid
       });
 
-      const batches = chunk(rows, this.flags.batchsize);
-      const result = await this.executeBatches(job, batches, this.flags.object, this.flags.wait);
-      return result as JsonMap[];
+      const batchResults = await this.executeBatches(job, rows, this.flags.batchsize, this.flags.wait);
+
+      const batchErrors = [];
+      if (this.flags.wait) {
+        rows = rows.map((data, i) => {
+          const { id, errors } = batchResults[i] ?? {};
+          const message = errors?.join(', ');
+          if (message) {
+            batchErrors.push({ line: i + 2, message, data });
+          }
+          return { ...data, Id: id, Errors: message };
+        });
+
+        if (batchErrors.length) {
+          this.ux.styledHeader('Upsert errors');
+          batchErrors.forEach(({ line, message }) => this.ux.log(`line ${line}: ${message}`));
+        }
+      } else {
+        const batchInfos = await job.list();
+        let command = 'sfdx force:data:bulk:status';
+        if (this.flags.targetusername) command += ' -u ' + this.flags.targetusername;
+
+        batchInfos.forEach((batch, i) => this.ux.log([
+          `Check batch #${i + 1}’s status with the command: `,
+          `${command} -i ${batch.jobId} -b ${batch.id}`
+        ].join('\n')));
+      }
+
+      if (this.flags.resultfile) this.saveCsv(this.flags.resultfile, rows);
+
+      const jobInfo = await job.check();
+      delete jobInfo.$;
+      delete jobInfo.state;
+      if (this.flags.wait) {
+        this.ux.styledHeader('Job Status');
+        this.ux.styledObject(jobInfo, Object.keys(jobInfo));
+      }
+      if (batchErrors.length) jobInfo.errors = batchErrors;
+
+      return jobInfo as JsonMap;
     } catch (e) {
       this.ux.stopSpinner('error');
       throw e;
+    } finally {
+      job?.close();
     }
   }
 
@@ -150,9 +187,41 @@ export default class UpsertCommand extends SfdxCommand {
     }});
   }
 
-  private executeBatches(job, batches, object, wait) {
-    const batcher = new Batcher(this.org.getConnection(), this.ux);
-    return batcher.createAndExecuteBatches(job, batches, object, wait);
+  private executeBatches(job, rows, batchSize, wait): Promise<BatchResultInfo[]> {
+    return Promise.all(
+      chunk(rows, batchSize).map(
+        batchRows => this.executeBatch(job, batchRows, wait)
+      )
+    ).then(
+      result => result.flat() as BatchResultInfo[]
+    );
+  }
+
+  private executeBatch(job, rows, wait): Promise<BatchResultInfo[]> {
+    return new Promise((resolve, reject) => {
+      const batch = job.createBatch();
+
+      batch.on('error', e => {
+        if (e.message.startsWith('Polling time out')) job.emit('error', e);
+        reject(e);
+      });
+
+      batch.on('queue', batchInfo => {
+        batch.check().then(result => {
+          if (result.state === 'Failed') {
+            reject(result.stateMessage);
+          } else if (wait) {
+            batch.poll(5000, wait * 60000);
+          } else {
+            resolve([]);
+          }
+        });
+      });
+
+      batch.on('response', resolve);
+
+      batch.execute(rows, error => error && reject(error));
+    });
   }
 
   private saveCsv(file, rows) {

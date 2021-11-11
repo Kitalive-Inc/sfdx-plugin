@@ -138,19 +138,23 @@ describe(commandName, () => {
     { 'Account.ExternalId__c': 'code2', LastName: 'contact3', Email: 'contact3@example.com' }
   ];
 
-  const job = {};
+  const job = {
+    check: () => ({}),
+    list: () => [],
+    close: () => {}
+  };
   const createReadStream = sinon.spy(file => csv.write(csvRows)) as any;
   const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
   const saveCsv = sinon.spy();
   const createJob = sinon.spy((sobject, options) => Promise.resolve(job)) as any;
-  const executeBatches = sinon.spy((...args) => Promise.resolve());
+  const executeBatch = sinon.spy((...args) => Promise.resolve([]));
 
   afterEach(() => {
     createReadStream.resetHistory();
     parseCsv.resetHistory();
     saveCsv.resetHistory();
     createJob.resetHistory();
-    executeBatches.resetHistory();
+    executeBatch.resetHistory();
   });
 
   const fieldTypes = {};
@@ -161,7 +165,7 @@ describe(commandName, () => {
     .stub(Command.prototype, 'parseCsv', parseCsv)
     .stub(Command.prototype, 'saveCsv', saveCsv)
     .stub(Command.prototype, 'createJob', createJob)
-    .stub(Command.prototype, 'executeBatches', executeBatches)
+    .stub(Command.prototype, 'executeBatch', executeBatch)
     .stdout();
 
   const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
@@ -186,11 +190,10 @@ describe(commandName, () => {
         assignmentRuleId: undefined
       });
 
-      expect(executeBatches.calledOnce).to.be.true;
-      expect(executeBatches.args[0][0]).to.eq(job);
-      expect(executeBatches.args[0][1]).to.eql([csvRows]);
-      expect(executeBatches.args[0][2]).to.eq('Contact');
-      expect(executeBatches.args[0][3]).to.be.undefined;
+      expect(executeBatch.calledOnce).to.be.true;
+      expect(executeBatch.args[0][0]).to.eq(job);
+      expect(executeBatch.args[0][1]).to.eql(csvRows);
+      expect(executeBatch.args[0][2]).to.be.undefined;
     });
 
   let args = defaultArgs.concat(
@@ -204,7 +207,7 @@ describe(commandName, () => {
     '-c', 'data/convert.js',
     '-w', '10',
     '--setnull',
-    '--save'
+    '-r', 'path/to/resultfile.csv'
   );
   const mapping = {};
   const convert = () => [];
@@ -233,8 +236,7 @@ describe(commandName, () => {
       });
 
       expect(saveCsv.calledOnce).to.be.true;
-      expect(saveCsv.args[0][0]).to.eql('data/Contact.converted.csv');
-      expect(saveCsv.args[0][1]).to.eql(csvRows);
+      expect(saveCsv.args[0][0]).to.eql('path/to/resultfile.csv');
 
       expect(createJob.calledOnce).to.be.true;
       expect(createJob.args[0][0]).to.eq('Contact');
@@ -243,11 +245,13 @@ describe(commandName, () => {
         concurrencyMode: 'Serial',
         assignmentRuleId: 'ruleId'
       });
-      expect(executeBatches.calledOnce).to.be.true;
-      expect(executeBatches.args[0][0]).to.eq(job);
-      expect(executeBatches.args[0][1]).to.eql([[csvRows[0], csvRows[1]], [csvRows[2]]]);
-      expect(executeBatches.args[0][2]).to.eq('Contact');
-      expect(executeBatches.args[0][3]).to.eq(10);
+      expect(executeBatch.calledTwice).to.be.true;
+      expect(executeBatch.args[0][0]).to.eq(job);
+      expect(executeBatch.args[0][1]).to.eql([csvRows[0], csvRows[1]]);
+      expect(executeBatch.args[0][2]).to.eq(10);
+      expect(executeBatch.args[1][0]).to.eq(job);
+      expect(executeBatch.args[1][1]).to.eql([csvRows[2]]);
+      expect(executeBatch.args[1][2]).to.eq(10);
     });
 
   const start = sinon.spy();

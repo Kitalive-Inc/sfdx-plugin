@@ -1,6 +1,7 @@
 {
   "extends": "./node_modules/@salesforce/dev-config/tsconfig",
   "compilerOptions": {
+    "lib": ["es2019"],
     "declaration": true,
     "rootDir": "./src",
     "outDir": "./lib",
