@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sfdx COMMAND
 running command...
 $ sfdx (-v|--version|version)
-@kitalive/sfdx-plugin/0.1.5 darwin-x64 node-v16.12.0
+@kitalive/sfdx-plugin/0.1.6 darwin-x64 node-v14.15.0
 $ sfdx --help [COMMAND]
 USAGE
   $ sfdx COMMAND
@@ -127,7 +127,7 @@ EXAMPLES
   10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.5/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -177,7 +177,7 @@ EXAMPLES
   $ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.5/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/data/csv/convert.ts)_
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -212,7 +212,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.5/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -258,7 +258,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.5/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -267,6 +267,7 @@ execute Node.js scripts in SfdxCommand context
 ```
 execute Node.js scripts in SfdxCommand context
 Available variables in Node.js scripts
+  argv: Parsed command line arguments after the file option
   conn: jsforce Connection
   context: SfdxCommand
 
@@ -291,6 +292,7 @@ OPTIONS
 
 DESCRIPTION
   Available variables in Node.js scripts
+     argv: Parsed command line arguments after the file option
      conn: jsforce Connection
      context: SfdxCommand
 
@@ -301,7 +303,9 @@ EXAMPLES
   $ sfdx kit:script -f ./path/to/script.js
   $ sfdx kit:script:execute
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
+  Top level await is not enabled by default in REPL before Node.js v16
+  $ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.5/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
