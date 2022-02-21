@@ -103,7 +103,7 @@ const converters = {
 
 const csvFlags = CsvConvertCommand['flagsConfig'];
 
-export const createBulkCommand = (operation: BulkOperation) => {
+export const createBulkCommand = (operation: BulkOperation): new(...args) => SfdxCommand => {
   const config = {
     object: flags.string({ char: 'o', required: true, description: `the sObject name to ${operation}` }),
     // csv settings

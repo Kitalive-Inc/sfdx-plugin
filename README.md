@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sfdx COMMAND
 running command...
 $ sfdx (-v|--version|version)
-@kitalive/sfdx-plugin/0.1.6 darwin-x64 node-v14.15.0
+@kitalive/sfdx-plugin/0.2.0 darwin-x64 node-v14.15.0
 $ sfdx --help [COMMAND]
 USAGE
   $ sfdx COMMAND
@@ -29,23 +29,279 @@ USAGE
 ## Commands
 
 <!-- commands -->
-* [`sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkupsert--o-string--i-string--f-filepath--r-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---convertonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:delete -q <string> [--hard] [--concurrencymode <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkdelete--q-string---hard---concurrencymode-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkinsert--o-string--f-filepath--r-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---convertonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkquery--q-string--f-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkupdate--o-string--f-filepath--r-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---convertonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
+* [`sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatabulkupsert--o-string--f-filepath--i-string--r-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---setnull---convertonly---concurrencymode-string---assignmentruleid-string--s-integer--w-integer--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitdatacsvconvert--f-filepath--o-filepath--e-string--d-string--q-string---skiplines-integer---trim--m-filepath--c-filepath---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitlayoutassignmentsdeploy--f-string--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitlayoutassignmentsretrieve--f-string--p-string--o-string---merge--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 * [`sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`](#sfdx-kitscriptexecute--f-filepath--u-string---apiversion-string---json---loglevel-tracedebuginfowarnerrorfataltracedebuginfowarnerrorfatal)
 
-## `sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+## `sfdx kit:data:bulk:delete -q <string> [--hard] [--concurrencymode <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+bulk delete records by SOQL select query
+
+```
+bulk delete records by SOQL select query
+
+USAGE
+  $ sfdx kit:data:bulk:delete -q <string> [--hard] [--concurrencymode <string>] [-s <integer>] [-w <integer>] [-u 
+  <string>] [--apiversion <string>] [--json] [--loglevel 
+  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -q, --query=query                                                                 (required) SOQL query to delete
+
+  -s, --batchsize=batchsize                                                         [default: 10000] the batch size of
+                                                                                    the job
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  -w, --wait=wait                                                                   the number of minutes to wait for
+                                                                                    the command to complete before
+                                                                                    displaying the results
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --concurrencymode=concurrencymode                                                 [default: Parallel] the concurrency
+                                                                                    mode (Parallel or Serial) for the
+                                                                                    job
+
+  --hard                                                                            perform a hard delete
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+EXAMPLE
+  $ sfdx kit:data:bulk:delete -q 'SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:5'
+```
+
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/delete.ts)_
+
+## `sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+bulk insert records from a CSV file
+
+```
+bulk insert records from a CSV file
+For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
+
+USAGE
+  $ sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] 
+  [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode 
+  <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] 
+  [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -c, --converter=converter                                                         the path of the script to convert
+                                                                                    CSV rows
+
+  -d, --delimiter=delimiter                                                         [default: ,] the input CSV file
+                                                                                    delimiter
+
+  -e, --encoding=encoding                                                           [default: utf8] the input CSV file
+                                                                                    encoding
+
+  -f, --csvfile=csvfile                                                             (required) the CSV file path that
+                                                                                    defines the records to insert
+
+  -m, --mapping=mapping                                                             the path of the JSON file that
+                                                                                    defines CSV column mappings
+
+  -o, --object=object                                                               (required) the sObject name to
+                                                                                    insert
+
+  -q, --quote=quote                                                                 [default: "] the input CSV file
+                                                                                    quote character
+
+  -r, --resultfile=resultfile                                                       the CSV file path for writing the
+                                                                                    insert results
+
+  -s, --batchsize=batchsize                                                         [default: 10000] the batch size of
+                                                                                    the job
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  -w, --wait=wait                                                                   the number of minutes to wait for
+                                                                                    the command to complete before
+                                                                                    displaying the results
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --assignmentruleid=assignmentruleid                                               the ID of a specific assignment rule
+                                                                                    to run for a case or a lead.
+
+  --concurrencymode=concurrencymode                                                 [default: Parallel] the concurrency
+                                                                                    mode (Parallel or Serial) for the
+                                                                                    job
+
+  --convertonly                                                                     output converted.csv file and skip
+                                                                                    insert for debugging
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+  --setnull                                                                         set blank values as null values
+                                                                                    during insert operations (default:
+                                                                                    empty field values are ignored)
+
+  --skiplines=skiplines                                                             the number of lines to skip
+
+  --trim                                                                            trim all white space from columns
+
+DESCRIPTION
+  For information about CSV file formats, see [Prepare CSV 
+  Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in 
+  the Bulk API Developer Guide.
+
+EXAMPLES
+  $ sfdx kit:data:bulk:insert -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
+  $ sfdx kit:data:bulk:insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
+```
+
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/insert.ts)_
+
+## `sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+bulk query records
+
+```
+bulk query records
+
+USAGE
+  $ sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
+  trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -f, --csvfile=csvfile                                                             output csv file (default: standard
+                                                                                    output)
+
+  -q, --query=query                                                                 (required) SOQL query to export
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+EXAMPLE
+  $ sfdx kit:data:bulk:query -q 'SELECT Id, Name FROM Account' -f ./path/to/Account.csv
+```
+
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/query.ts)_
+
+## `sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
+
+bulk update records from a CSV file
+
+```
+bulk update records from a CSV file
+For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
+
+USAGE
+  $ sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] 
+  [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode 
+  <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] 
+  [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
+
+OPTIONS
+  -c, --converter=converter                                                         the path of the script to convert
+                                                                                    CSV rows
+
+  -d, --delimiter=delimiter                                                         [default: ,] the input CSV file
+                                                                                    delimiter
+
+  -e, --encoding=encoding                                                           [default: utf8] the input CSV file
+                                                                                    encoding
+
+  -f, --csvfile=csvfile                                                             (required) the CSV file path that
+                                                                                    defines the records to update
+
+  -m, --mapping=mapping                                                             the path of the JSON file that
+                                                                                    defines CSV column mappings
+
+  -o, --object=object                                                               (required) the sObject name to
+                                                                                    update
+
+  -q, --quote=quote                                                                 [default: "] the input CSV file
+                                                                                    quote character
+
+  -r, --resultfile=resultfile                                                       the CSV file path for writing the
+                                                                                    update results
+
+  -s, --batchsize=batchsize                                                         [default: 10000] the batch size of
+                                                                                    the job
+
+  -u, --targetusername=targetusername                                               username or alias for the target
+                                                                                    org; overrides default target org
+
+  -w, --wait=wait                                                                   the number of minutes to wait for
+                                                                                    the command to complete before
+                                                                                    displaying the results
+
+  --apiversion=apiversion                                                           override the api version used for
+                                                                                    api requests made by this command
+
+  --assignmentruleid=assignmentruleid                                               the ID of a specific assignment rule
+                                                                                    to run for a case or a lead.
+
+  --concurrencymode=concurrencymode                                                 [default: Parallel] the concurrency
+                                                                                    mode (Parallel or Serial) for the
+                                                                                    job
+
+  --convertonly                                                                     output converted.csv file and skip
+                                                                                    update for debugging
+
+  --json                                                                            format output as json
+
+  --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
+                                                                                    this command invocation
+
+  --setnull                                                                         set blank values as null values
+                                                                                    during update operations (default:
+                                                                                    empty field values are ignored)
+
+  --skiplines=skiplines                                                             the number of lines to skip
+
+  --trim                                                                            trim all white space from columns
+
+DESCRIPTION
+  For information about CSV file formats, see [Prepare CSV 
+  Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in 
+  the Bulk API Developer Guide.
+
+EXAMPLES
+  $ sfdx kit:data:bulk:update -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
+  $ sfdx kit:data:bulk:update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
+```
+
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/update.ts)_
+
+## `sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk upsert records from a CSV file
 
 ```
 bulk upsert records from a CSV file
-Upsert records using Bulk API and returns a job ID and a batch ID. Use these IDs to check job status with data:bulk:status.
 For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
 
 USAGE
-  $ sfdx kit:data:bulk:upsert -o <string> -i <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q 
+  $ sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q 
   <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] 
   [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion 
   <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
@@ -115,8 +371,6 @@ OPTIONS
   --trim                                                                            trim all white space from columns
 
 DESCRIPTION
-  Upsert records using Bulk API and returns a job ID and a batch ID. Use these IDs to check job status with 
-  data:bulk:status.
   For information about CSV file formats, see [Prepare CSV 
   Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in 
   the Bulk API Developer Guide.
@@ -127,7 +381,7 @@ EXAMPLES
   10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -177,7 +431,7 @@ EXAMPLES
   $ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/csv/convert.ts)_
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -212,7 +466,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -258,7 +512,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -307,5 +561,5 @@ EXAMPLES
   $ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.1.6/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
