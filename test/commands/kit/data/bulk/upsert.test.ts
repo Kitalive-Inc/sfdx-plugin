@@ -138,34 +138,26 @@ describe(commandName, () => {
     { 'Account.ExternalId__c': 'code2', LastName: 'contact3', Email: 'contact3@example.com' }
   ];
 
-  const job = {
-    check: () => ({}),
-    list: () => [],
-    close: () => {}
-  };
   const createReadStream = sinon.spy(file => csv.write(csvRows)) as any;
   const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
   const saveCsv = sinon.spy();
-  const createJob = sinon.spy((sobject, options) => Promise.resolve(job)) as any;
-  const executeBatch = sinon.spy((...args) => Promise.resolve([]));
+  const bulkLoad = sinon.spy((...args) => Promise.resolve({job: {}, records: []}));
 
   afterEach(() => {
     createReadStream.resetHistory();
     parseCsv.resetHistory();
     saveCsv.resetHistory();
-    createJob.resetHistory();
-    executeBatch.resetHistory();
+    bulkLoad.resetHistory();
   });
 
   const fieldTypes = {};
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
     .stub(fs, 'createReadStream', createReadStream)
+    .stub(Command.prototype, 'bulkLoad', bulkLoad)
     .stub(Command.prototype, 'getFieldTypes', () => fieldTypes)
     .stub(Command.prototype, 'parseCsv', parseCsv)
     .stub(Command.prototype, 'saveCsv', saveCsv)
-    .stub(Command.prototype, 'createJob', createJob)
-    .stub(Command.prototype, 'executeBatch', executeBatch)
     .stdout();
 
   const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
@@ -182,18 +174,17 @@ describe(commandName, () => {
 
       expect(saveCsv.called).to.be.false;
 
-      expect(createJob.calledOnce).to.be.true;
-      expect(createJob.args[0][0]).to.eq('Contact');
-      expect(createJob.args[0][1]).to.eql({
+      expect(bulkLoad.calledOnce).to.be.true;
+      expect(bulkLoad.args[0][1]).to.eq('Contact');
+      expect(bulkLoad.args[0][2]).to.eq('upsert');
+      expect(bulkLoad.args[0][3]).to.eql(csvRows);
+      expect(bulkLoad.args[0][4]).to.eql({
         extIdField: 'Id',
         concurrencyMode: 'Parallel',
-        assignmentRuleId: undefined
+        assignmentRuleId: undefined,
+        batchSize: 10000,
+        wait: undefined
       });
-
-      expect(executeBatch.calledOnce).to.be.true;
-      expect(executeBatch.args[0][0]).to.eq(job);
-      expect(executeBatch.args[0][1]).to.eql(csvRows);
-      expect(executeBatch.args[0][2]).to.be.undefined;
     });
 
   let args = defaultArgs.concat(
@@ -238,20 +229,17 @@ describe(commandName, () => {
       expect(saveCsv.calledOnce).to.be.true;
       expect(saveCsv.args[0][0]).to.eql('path/to/resultfile.csv');
 
-      expect(createJob.calledOnce).to.be.true;
-      expect(createJob.args[0][0]).to.eq('Contact');
-      expect(createJob.args[0][1]).to.eql({
+      expect(bulkLoad.calledOnce).to.be.true;
+      expect(bulkLoad.args[0][1]).to.eq('Contact');
+      expect(bulkLoad.args[0][2]).to.eq('upsert');
+      expect(bulkLoad.args[0][3]).to.eql(csvRows);
+      expect(bulkLoad.args[0][4]).to.eql({
         extIdField: 'Email',
         concurrencyMode: 'Serial',
-        assignmentRuleId: 'ruleId'
+        assignmentRuleId: 'ruleId',
+        batchSize: 2,
+        wait: 10
       });
-      expect(executeBatch.calledTwice).to.be.true;
-      expect(executeBatch.args[0][0]).to.eq(job);
-      expect(executeBatch.args[0][1]).to.eql([csvRows[0], csvRows[1]]);
-      expect(executeBatch.args[0][2]).to.eq(10);
-      expect(executeBatch.args[1][0]).to.eq(job);
-      expect(executeBatch.args[1][1]).to.eql([csvRows[2]]);
-      expect(executeBatch.args[1][2]).to.eq(10);
     });
 
   const start = sinon.spy();

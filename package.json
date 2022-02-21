@@ -15,6 +15,7 @@
     "fs-extra": "^9.1.0",
     "iconv-lite": "^0.6.2",
     "jsforce": "^1.10.1",
+    "soql-parser-js": "^4.3.0",
     "tslib": "^1",
     "yargs": "^17.3.1"
   },
