@@ -1,5 +1,6 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import * as fs from 'fs-extra';
+import * as path from 'path';
 import * as repl from 'repl';
 import yargs from 'yargs';
 
@@ -37,8 +38,12 @@ export default class ScriptExecuteCommand extends SfdxCommand {
       const fileIndex = process.argv.indexOf(file);
       const argv = yargs([]).parse(process.argv.slice(fileIndex + 1));
       const script = fs.readFileSync(file).toString('utf8');
+      const loader = name => {
+        if (name.startsWith('.')) name = path.resolve(path.dirname(file), name);
+        return require(name);
+      };
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      return await new asyncFunction('require', 'argv', 'context', 'conn', script)(require, argv, this, this.org.getConnection());
+      return await new asyncFunction('require', 'argv', 'context', 'conn', script)(loader, argv, this, this.org.getConnection());
     } else {
       this.ux.log('Starting sfdx REPL mode');
       this.ux.log('Available variables');
