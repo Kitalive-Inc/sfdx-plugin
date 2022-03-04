@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sfdx COMMAND
 running command...
 $ sfdx (-v|--version|version)
-@kitalive/sfdx-plugin/0.2.0 darwin-x64 node-v14.15.0
+@kitalive/sfdx-plugin/0.2.1 darwin-x64 node-v14.15.0
 $ sfdx --help [COMMAND]
 USAGE
   $ sfdx COMMAND
@@ -44,8 +44,6 @@ USAGE
 bulk delete records by SOQL select query
 
 ```
-bulk delete records by SOQL select query
-
 USAGE
   $ sfdx kit:data:bulk:delete -q <string> [--hard] [--concurrencymode <string>] [-s <integer>] [-w <integer>] [-u 
   <string>] [--apiversion <string>] [--json] [--loglevel 
@@ -82,16 +80,13 @@ EXAMPLE
   $ sfdx kit:data:bulk:delete -q 'SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:5'
 ```
 
-_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/delete.ts)_
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/delete.ts)_
 
 ## `sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk insert records from a CSV file
 
 ```
-bulk insert records from a CSV file
-For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
-
 USAGE
   $ sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] 
   [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode 
@@ -155,7 +150,8 @@ OPTIONS
                                                                                     during insert operations (default:
                                                                                     empty field values are ignored)
 
-  --skiplines=skiplines                                                             the number of lines to skip
+  --skiplines=skiplines                                                             [default: 0] the number of lines to
+                                                                                    skip
 
   --trim                                                                            trim all white space from columns
 
@@ -169,15 +165,13 @@ EXAMPLES
   $ sfdx kit:data:bulk:insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/insert.ts)_
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/insert.ts)_
 
 ## `sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk query records
 
 ```
-bulk query records
-
 USAGE
   $ sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
@@ -203,16 +197,13 @@ EXAMPLE
   $ sfdx kit:data:bulk:query -q 'SELECT Id, Name FROM Account' -f ./path/to/Account.csv
 ```
 
-_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/query.ts)_
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/query.ts)_
 
 ## `sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk update records from a CSV file
 
 ```
-bulk update records from a CSV file
-For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
-
 USAGE
   $ sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] 
   [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode 
@@ -276,7 +267,8 @@ OPTIONS
                                                                                     during update operations (default:
                                                                                     empty field values are ignored)
 
-  --skiplines=skiplines                                                             the number of lines to skip
+  --skiplines=skiplines                                                             [default: 0] the number of lines to
+                                                                                    skip
 
   --trim                                                                            trim all white space from columns
 
@@ -290,16 +282,13 @@ EXAMPLES
   $ sfdx kit:data:bulk:update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/update.ts)_
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/update.ts)_
 
 ## `sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 bulk upsert records from a CSV file
 
 ```
-bulk upsert records from a CSV file
-For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.
-
 USAGE
   $ sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q 
   <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] 
@@ -366,7 +355,8 @@ OPTIONS
                                                                                     during upsert operations (default:
                                                                                     empty field values are ignored)
 
-  --skiplines=skiplines                                                             the number of lines to skip
+  --skiplines=skiplines                                                             [default: 0] the number of lines to
+                                                                                    skip
 
   --trim                                                                            trim all white space from columns
 
@@ -381,15 +371,13 @@ EXAMPLES
   10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 convert CSV data using column mapping file or Node.js script
 
 ```
-convert CSV data using column mapping file or Node.js script
-
 USAGE
   $ sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines 
   <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel 
@@ -422,7 +410,8 @@ OPTIONS
   --loglevel=(trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL)  [default: warn] logging level for
                                                                                     this command invocation
 
-  --skiplines=skiplines                                                             the number of lines to skip
+  --skiplines=skiplines                                                             [default: 0] the number of lines to
+                                                                                    skip
 
   --trim                                                                            trim all white space from columns
 
@@ -431,15 +420,13 @@ EXAMPLES
   $ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/csv/convert.ts)_
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 deploy page layout assignments from JSON file
 
 ```
-deploy page layout assignments from JSON file
-
 USAGE
   $ sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
@@ -466,15 +453,13 @@ EXAMPLES
   $ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 retrieve page layout assignments and save to JSON file
 
 ```
-retrieve page layout assignments and save to JSON file
-
 USAGE
   $ sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion 
   <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
@@ -512,19 +497,13 @@ EXAMPLES
   $ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
 execute Node.js scripts in SfdxCommand context
 
 ```
-execute Node.js scripts in SfdxCommand context
-Available variables in Node.js scripts
-  argv: Parsed command line arguments after the file option
-  conn: jsforce Connection
-  context: SfdxCommand
-
 USAGE
   $ sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel 
   trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]
@@ -546,9 +525,9 @@ OPTIONS
 
 DESCRIPTION
   Available variables in Node.js scripts
-     argv: Parsed command line arguments after the file option
-     conn: jsforce Connection
-     context: SfdxCommand
+    argv: Parsed command line arguments after the file option
+    conn: jsforce Connection
+    context: SfdxCommand
 
 ALIASES
   $ sfdx kit:script
@@ -561,5 +540,5 @@ EXAMPLES
   $ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.0/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->

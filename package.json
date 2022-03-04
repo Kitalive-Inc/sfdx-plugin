@@ -1,14 +1,11 @@
 {
   "name": "@kitalive/sfdx-plugin",
   "description": "Kitalive SFDX plugin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": "Akihiro Ono",
   "bugs": "https://github.com/Kitalive-Inc/sfdx-plugin/issues",
   "dependencies": {
-    "@oclif/command": "^1",
-    "@oclif/config": "^1",
-    "@oclif/errors": "^1",
-    "@salesforce/command": "^3.1.3",
+    "@salesforce/command": "^4",
     "@salesforce/core": "^2.23.5",
     "dayjs": "^1.10.4",
     "fast-csv": "^4.3.6",
