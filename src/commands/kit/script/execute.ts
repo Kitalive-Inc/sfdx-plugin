@@ -23,7 +23,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
 
   public static aliases = ['kit:script'];
   public static strict = false;
-  protected static requiresUsername = true;
+  protected static supportsUsername = true;
   protected static requiresProject = false;
 
   protected static flagsConfig = {
@@ -43,7 +43,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
         return require(name);
       };
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      return await new asyncFunction('require', 'argv', 'context', 'conn', script)(loader, argv, this, this.org.getConnection());
+      return await new asyncFunction('require', 'argv', 'context', 'conn', script)(loader, argv, this, this.org?.getConnection());
     } else {
       this.ux.log('Starting sfdx REPL mode');
       this.ux.log('Available variables');
@@ -54,7 +54,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
       const replServer = repl.start('> ');
       replServer.context.require = require;
       replServer.context.context = this;
-      replServer.context.conn = this.org.getConnection();
+      replServer.context.conn = this.org?.getConnection();
 
       return new Promise(
         resolve => replServer.on('exit', () => resolve())
