@@ -1,7 +1,6 @@
-import { expect, test } from '@salesforce/command/lib/test';
+import { test } from '@salesforce/command/lib/test';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
-import * as sinon from 'sinon';
 import Command from '../../../../../src/commands/kit/data/bulk/update';
 
 const commandName = 'kit:data:bulk:update';
@@ -12,32 +11,28 @@ describe(commandName, () => {
     { LastName: 'contact3', Email: 'contact3@example.com' }
   ];
 
-  const createReadStream = sinon.spy(file => csv.write(csvRows)) as any;
-  const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
-  const saveCsv = sinon.spy();
-  const bulkLoad = sinon.spy((...args) => Promise.resolve({job: {}, records: []}));
-
   const fieldTypes = {};
+  const createReadStream = jest.spyOn(fs, 'createReadStream').mockReturnValue(csv.write(csvRows));
+  jest.spyOn(Command.prototype, 'parseCsv' as any).mockReturnValue(Promise.resolve(csvRows));
+  jest.spyOn(Command.prototype, 'saveCsv' as any).mockImplementation(() => {});
+  jest.spyOn(Command.prototype, 'getFieldTypes').mockReturnValue(fieldTypes);
+  const bulkLoad = jest.spyOn(Command.prototype, 'bulkLoad').mockReturnValue(Promise.resolve({job: {}, records: []}));
+
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
-    .stub(fs, 'createReadStream', createReadStream)
-    .stub(Command.prototype, 'bulkLoad', bulkLoad)
-    .stub(Command.prototype, 'getFieldTypes', () => fieldTypes)
-    .stub(Command.prototype, 'parseCsv', parseCsv)
-    .stub(Command.prototype, 'saveCsv', saveCsv)
-    .stdout();
+    .stdout().stderr();
 
   const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
   testSetup
     .command([commandName].concat(defaultArgs))
     .it(defaultArgs.join(' '), ctx => {
-      expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
+      expect(createReadStream).toHaveBeenCalledWith('data/Contact.csv');
 
-      expect(bulkLoad.calledOnce).to.be.true;
-      expect(bulkLoad.args[0][1]).to.eq('Contact');
-      expect(bulkLoad.args[0][2]).to.eq('update');
-      expect(bulkLoad.args[0][3]).to.eql(csvRows);
-      expect(bulkLoad.args[0][4]).to.eql({
+      expect(bulkLoad).toHaveBeenCalledTimes(1);
+      expect(bulkLoad.mock.calls[0][1]).toBe('Contact');
+      expect(bulkLoad.mock.calls[0][2]).toBe('update');
+      expect(bulkLoad.mock.calls[0][3]).toEqual(csvRows);
+      expect(bulkLoad.mock.calls[0][4]).toEqual({
         extIdField: undefined,
         concurrencyMode: 'Parallel',
         assignmentRuleId: undefined,

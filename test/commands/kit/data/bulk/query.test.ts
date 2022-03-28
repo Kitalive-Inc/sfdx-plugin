@@ -1,5 +1,4 @@
-import { expect, test } from '@salesforce/command/lib/test';
-import * as sinon from 'sinon';
+import { test } from '@salesforce/command/lib/test';
 import Command from '../../../../../src/commands/kit/data/bulk/query';
 
 const commandName = 'kit:data:bulk:query';
@@ -8,7 +7,7 @@ describe(commandName, () => {
   const emptyQuery = 'SELECT Id FROM Contact';
   const invalidQuery = 'invalid';
 
-  const bulkQuery = sinon.spy((...args) => {
+  const bulkQuery = jest.spyOn(Command.prototype, 'bulkQuery' as any).mockImplementation((...args) => {
     switch (args[1]) {
       case validQuery:
         return Promise.resolve([{ Id: 'id1' }]);
@@ -20,31 +19,30 @@ describe(commandName, () => {
   });
 
   afterEach(() => {
-    bulkQuery.resetHistory();
+    bulkQuery.mockClear();
   });
 
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
-    .stub(Command.prototype, 'bulkQuery', bulkQuery)
     .stdout().stderr();
 
   testSetup
     .command([commandName, '-q', validQuery])
     .it('success', ctx => {
-      expect(bulkQuery.args[0][1]).to.eq(validQuery);
+      expect(bulkQuery.mock.calls[0][1]).toBe(validQuery);
     });
 
   testSetup
     .command([commandName, '-q', emptyQuery])
     .it('empty', ctx => {
-      expect(bulkQuery.args[0][1]).to.eq(emptyQuery);
-      expect(ctx.stderr).to.contain('no records');
+      expect(bulkQuery.mock.calls[0][1]).toBe(emptyQuery);
+      expect(ctx.stderr).toMatch('no records');
     });
 
   testSetup
     .command([commandName, '-q', invalidQuery])
     .it('error', ctx => {
-      expect(bulkQuery.args[0][1]).to.eq(invalidQuery);
-      expect(ctx.stderr).to.contain('error message');
+      expect(bulkQuery.mock.calls[0][1]).toBe(invalidQuery);
+      expect(ctx.stderr).toMatch('error');
     });
 });

@@ -52,7 +52,7 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
 
   public async objectNamesFromLayouts(): Promise<string[]> {
     // tslint:disable-next-line
-    const config: any = await this.project.resolveProjectConfig();
+    const config: any = await this.getProjectConfig();
     const packageDir = config.packageDirectories && config.packageDirectories.find(dir => dir.default);
     if (!packageDir) return [];
 
@@ -63,6 +63,10 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
         objectCounts[object] = (objectCounts[object] || 0) + 1;
     }
     return Object.keys(objectCounts).filter(object => objectCounts[object] >= 2).sort();
+  }
+
+  private getProjectConfig() {
+    return this.project.resolveProjectConfig();
   }
 
   private getProfileNames(): Promise<string[]> {

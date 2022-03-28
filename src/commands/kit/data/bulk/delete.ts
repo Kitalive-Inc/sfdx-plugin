@@ -51,7 +51,7 @@ export default class DeleteCommand extends SfdxCommand {
       } else {
         this.ux.stopSpinner();
         this.ux.log('Check bulk job status with the command: ');
-        this.ux.log(`sfdx force:org:open -u ${this.flags.targetusername} -p "lightning/setup/AsyncApiJobStatus/page?address=%2F${result.job.id}"`);
+        this.ux.log(`sfdx force:org:open -u ${this.flags.targetusername} -p "lightning/setup/AsyncApiJobStatus/page?address=%2F${result.job?.id}"`);
       }
 
       return result;

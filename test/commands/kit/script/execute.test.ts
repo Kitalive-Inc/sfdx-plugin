@@ -1,17 +1,16 @@
-import { expect, test } from '@salesforce/command/lib/test';
+import { test } from '@salesforce/command/lib/test';
 import * as fs from 'fs-extra';
 import { Connection } from 'jsforce';
 import * as repl from 'repl';
-import * as sinon from 'sinon';
 import Command from '../../../../src/commands/kit/script/execute';
 
 const commandName = 'kit:script:execute';
 describe(commandName, () => {
   const testSetup = test
     .withOrg({ username: 'test@org.com' }, true)
-    .stdout();
+    .stdout().stderr();
 
-  const validateVariables = sinon.spy();
+  const validateVariables = jest.fn();
 
   Object.assign(global, { validateVariables });
   const script = `
@@ -22,15 +21,15 @@ describe(commandName, () => {
     .stub(fs, 'readFileSync', () => script)
     .command([commandName, '-f', 'path/to/script.js'])
     .it('script mode', ctx => {
-      expect(validateVariables.calledOnce).to.be.true;
-      expect(validateVariables.args[0][0] instanceof Connection).to.be.true;
-      expect(validateVariables.args[0][1] instanceof Command).to.be.true;
+      expect(validateVariables.mock.calls.length).toBe(1);
+      expect(validateVariables.mock.calls[0][0] instanceof Connection).toBe(true);
+      expect(validateVariables.mock.calls[0][1] instanceof Command).toBe(true);
     });
 
   const replServer = {
     context: {},
     on: (event, callback) => {
-      expect(event).to.eq('exit');
+      expect(event).toEqual('exit');
       callback();
     }
   };
@@ -38,7 +37,7 @@ describe(commandName, () => {
     .stub(repl, 'start', () => replServer)
     .command([commandName])
     .it('REPL mode', ctx => {
-      expect(replServer.context['conn'] instanceof Connection).to.be.true;
-      expect(replServer.context['context'] instanceof Command).to.be.true;
+      expect(replServer.context['conn'] instanceof Connection).toBe(true);
+      expect(replServer.context['context'] instanceof Command).toBe(true);
     });
 });

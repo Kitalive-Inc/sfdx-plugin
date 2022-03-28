@@ -1,9 +1,8 @@
-import { expect, test } from '@salesforce/command/lib/test';
+import { test } from '@salesforce/command/lib/test';
 import { assert } from 'chai';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import { encodeStream } from 'iconv-lite';
-import * as sinon from 'sinon';
 import Command from '../../../../../src/commands/kit/data/csv/convert';
 import { parseCsv } from '../../../../../src/commands/kit/data/csv/convert';
 
@@ -20,7 +19,7 @@ describe('parseCsv', () => {
 
   it('with no options', async () => {
     const rows = await parseCsv(csvStream());
-    expect(rows).to.eql(csvRows)
+    expect(rows).toEqual(csvRows)
   });
 
   it('with mapping', async () => {
@@ -30,7 +29,7 @@ describe('parseCsv', () => {
         Field2__c: 'col3'
       }
     });
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { Field1__c: 'col1_1', Field2__c: 'col3_1' },
       { Field1__c: 'col1_2', Field2__c: 'col3_2' },
       { Field1__c: 'col1_3', Field2__c: 'col3_3' }
@@ -47,7 +46,7 @@ describe('parseCsv', () => {
       });
       assert.fail("no error is thrown");
     } catch (e) {
-      expect(e.message).to.include("The column 'invalid_col' is not found");
+      expect(e.message).toMatch("The column 'invalid_col' is not found");
     }
   });
 
@@ -62,7 +61,7 @@ describe('parseCsv', () => {
         };
       }
     });
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { Field1__c: 'col1_1 col2_1', Field2__c: 'col3_1' },
       { Field1__c: 'col1_3 col2_3', Field2__c: 'col3_3' }
     ]);
@@ -73,7 +72,7 @@ describe('parseCsv', () => {
       Readable.from('a:b:c\nv1:v2:v3'),
       { delimiter: ':' }
     );
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { a: 'v1', b: 'v2', c: 'v3' }
     ]);
   });
@@ -83,7 +82,7 @@ describe('parseCsv', () => {
       Readable.from(`a,b,c,d\n'1,2',3,"4,5"`),
       { quote: "'" }
     );
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { a: '1,2', b: '3', c: '"4', d: '5"' }
     ]);
   });
@@ -93,7 +92,7 @@ describe('parseCsv', () => {
       Readable.from(`skip1,skip2\na,b\n1,2`),
       { skiplines: 1 }
     );
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { a: '1', b: '2' }
     ]);
   });
@@ -103,7 +102,7 @@ describe('parseCsv', () => {
       Readable.from(`a,b\n 1\t ,   2`),
       { trim: true }
     );
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { a: '1', b: '2' }
     ]);
   });
@@ -113,7 +112,7 @@ describe('parseCsv', () => {
       Readable.from('col1,col2\n値1,値2').pipe(encodeStream('cp932')),
       { encoding: 'cp932' }
     );
-    expect(rows).to.eql([
+    expect(rows).toEqual([
       { col1: '値1', col2: '値2' }
     ]);
   });
@@ -126,64 +125,46 @@ describe(commandName, () => {
     { 'a': 'a2', b: 'b2', c: 'c2' }
   ];
 
-  const createReadStream = sinon.spy(file => csv.write(csvRows, { headers: true })) as any;
-  const createWriteStream = sinon.spy(file => {}) as any;
-  const writeCsv = sinon.spy((rows, stream) => {}) as any;
-  const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows)) as any;
+  const createReadStream = jest.spyOn(fs, 'createReadStream').mockImplementation(file => csv.write(csvRows, { headers: true }));
+  const createWriteStream = jest.spyOn(fs, 'createWriteStream').mockImplementation(file => {});
+  const writeCsv = jest.spyOn(Command.prototype, 'writeCsv' as any).mockImplementation((rows, stream) => {});
 
   afterEach(() => {
-    createReadStream.resetHistory();
-    createWriteStream.resetHistory();
-    writeCsv.resetHistory();
-    parseCsv.resetHistory();
+    createReadStream.mockClear();
+    createWriteStream.mockClear();
+    writeCsv.mockClear();
   });
 
   const testSetup = test
-    .stub(fs, 'createReadStream', createReadStream)
-    .stub(fs, 'createWriteStream', createWriteStream)
-    .stub(Command.prototype, 'writeCsv', writeCsv)
-    .stdout();
-
-  const stdin = sinon.spy(() => csv.write(csvRows, { headers: true })) as any;
-  testSetup
-    .stub(process, 'stdin', stdin)
-    .command([commandName])
-    .it('no argument', ctx => {
-      expect(stdin.called).to.be.true;
-      expect(writeCsv.calledOnce).to.be.true;
-      expect(writeCsv.args[0][0]).to.eql(csvRows);
-      expect(writeCsv.args[0][1]).to.eq(process.stdout);
-    });
+    .stdout().stderr();
 
   const defaultArgs = ['-f', 'data/input.csv', '-o', 'data/output.csv'];
   testSetup
     .command([commandName].concat(defaultArgs))
     .it(defaultArgs.join(' '), ctx => {
-      expect(createReadStream.calledWith('data/input.csv')).to.be.true;
-      expect(createWriteStream.calledWith('data/output.csv')).to.be.true;
-      expect(writeCsv.calledOnce).to.be.true;
-      expect(writeCsv.args[0][0]).to.eql(csvRows);
+      expect(createReadStream).toHaveBeenCalledWith('data/input.csv');
+      expect(createWriteStream).toHaveBeenCalledWith('data/output.csv');
+      expect(writeCsv).toHaveBeenCalledTimes(1);
+      expect(writeCsv.mock.calls[0][0]).toEqual(csvRows);
     });
 
   let args = defaultArgs.concat('-m', 'data/mapping.json');
-  const readJson = sinon.spy(file => ({field: 'b'})) as any;
+  const readJson = jest.spyOn(fs, 'readJson').mockImplementation(async (file) => ({field: 'b'}));
   testSetup
-    .stub(fs, 'readJson', readJson)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
-      expect(readJson.calledOnce).to.be.true;
-      expect(readJson.args[0][0]).to.eq('data/mapping.json');
-      expect(writeCsv.args[0][0]).to.eql([{field: 'b1'}, {field: 'b2'}]);
+      expect(readJson).toHaveBeenCalledTimes(1);
+      expect(readJson.mock.calls[0][0]).toBe('data/mapping.json');
+      expect(writeCsv.mock.calls[0][0]).toEqual([{field: 'b1'}, {field: 'b2'}]);
     });
 
   args = defaultArgs.concat('-c', 'data/convert.js');
-  const loadConverter = sinon.spy(file => (row) => ({ field: row.b.toUpperCase() })) as any;
+  const loadConverter = jest.spyOn(Command.prototype, 'loadConverter' as any).mockImplementation(file => (row) => ({ field: row.b.toUpperCase() }));
   testSetup
-    .stub(Command.prototype, 'loadConverter', loadConverter)
     .command([commandName].concat(args))
     .it(args.join(' '), ctx => {
-      expect(loadConverter.calledOnce).to.be.true;
-      expect(loadConverter.args[0][0]).to.eq('data/convert.js');
-      expect(writeCsv.args[0][0]).to.eql([{field: 'B1'}, {field: 'B2'}]);
+      expect(loadConverter).toHaveBeenCalledTimes(1);
+      expect(loadConverter.mock.calls[0][0]).toBe('data/convert.js');
+      expect(writeCsv.mock.calls[0][0]).toEqual([{field: 'B1'}, {field: 'B2'}]);
     });
 });

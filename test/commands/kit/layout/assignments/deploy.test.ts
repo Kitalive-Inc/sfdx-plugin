@@ -1,9 +1,9 @@
-import { expect, test } from '@salesforce/command/lib/test';
-import { spy } from 'sinon';
+import { test } from '@salesforce/command/lib/test';
 import Command from '../../../../../src/commands/kit/layout/assignments/deploy';
+import { LayoutAssignmentsPerProfile } from '../../../../../src/types';
 
 describe('kit:layout:assignments:deploy', () => {
-  const config = {
+  const config: LayoutAssignmentsPerProfile = {
     "Admin": [
       { layout: "Account-Account Layout For Admin" },
       { layout: "Contact-Contact Layout For Admin" }
@@ -14,35 +14,33 @@ describe('kit:layout:assignments:deploy', () => {
     ]
   };
 
-  const readFile = spy(file => config) as any;
-  const deploy = spy(data => Promise.resolve({})) as any;
+  const readFile = jest.spyOn(Command.prototype as any, 'readFile').mockReturnValue(config);
+  const deploy = jest.spyOn(Command.prototype as any, 'deploy').mockReturnValue({});
 
   afterEach(() => {
-    readFile.resetHistory();
-    deploy.resetHistory();
+    readFile.mockClear();
+    deploy.mockClear();
   });
 
   const t = test
     .withOrg({ username: 'test@org.com' }, true)
-    .stub(Command.prototype, 'readFile', readFile)
-    .stub(Command.prototype, 'deploy', deploy)
-    .stdout();
+    .stdout().stderr();
 
   t.command(['kit:layout:assignments:deploy'])
     .it('no arguments', ctx => {
-      expect(readFile.calledWith('config/layout-assignments.json')).to.be.true;
-      expect(deploy.calledOnce).to.be.true;
-      expect(deploy.args[0][0]).to.eql([
+      expect(readFile).toHaveBeenCalledWith('config/layout-assignments.json');
+      expect(deploy).toHaveBeenCalledTimes(1);
+      expect(deploy.mock.calls[0][0]).toEqual([
         { fullName: 'Admin', layoutAssignments: config.Admin },
         { fullName: 'Standard', layoutAssignments: config.Standard }
       ]);
-      expect(ctx.stdout).to.contain('deploy layout assignments from config/layout-assignments.json');
+      expect(ctx.stdout).toMatch('deploy layout assignments from config/layout-assignments.json');
     });
 
   t.command(['kit:layout:assignments:deploy', '-f', 'config/test.json'])
     .it('-f config/test.json', ctx => {
-      expect(readFile.calledWith('config/test.json')).to.be.true;
-      expect(ctx.stdout).to.contain('deploy layout assignments from config/test.json');
+      expect(readFile).toHaveBeenCalledWith('config/test.json');
+      expect(ctx.stdout).toMatch('deploy layout assignments from config/test.json');
     });
 
 
@@ -59,11 +57,11 @@ describe('kit:layout:assignments:deploy', () => {
     }) as any)
     .command(['kit:layout:assignments:deploy'])
     .it('update 10 profiles per one API call', ctx => {
-      expect(deploy.callCount).to.eq(4);
-      expect(deploy.args[0][0].length).to.eq(10);
-      expect(deploy.args[1][0].length).to.eq(10);
-      expect(deploy.args[2][0].length).to.eq(10);
-      expect(deploy.args[3][0].length).to.eq(5);
+      expect(deploy.mock.calls.length).toBe(4);
+      expect(deploy.mock.calls[0][0]).toHaveLength(10);
+      expect(deploy.mock.calls[1][0]).toHaveLength(10);
+      expect(deploy.mock.calls[2][0]).toHaveLength(10);
+      expect(deploy.mock.calls[3][0]).toHaveLength(5);
     });
 
 });
