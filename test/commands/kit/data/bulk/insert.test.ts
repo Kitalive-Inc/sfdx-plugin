@@ -9,13 +9,15 @@ describe(commandName, () => {
   const csvRows = [
     { LastName: 'contact1', Email: 'contact1@example.com' },
     { LastName: 'contact2', Email: 'contact2@example.com' },
-    { LastName: 'contact3', Email: 'contact3@example.com' }
+    { LastName: 'contact3', Email: 'contact3@example.com' },
   ];
 
-  const createReadStream = sinon.spy(file => csv.write(csvRows)) as any;
+  const createReadStream = sinon.spy((file) => csv.write(csvRows)) as any;
   const parseCsv = sinon.spy((...args) => Promise.resolve(csvRows));
   const saveCsv = sinon.spy();
-  const bulkLoad = sinon.spy((...args) => Promise.resolve({job: {}, records: []}));
+  const bulkLoad = sinon.spy((...args) =>
+    Promise.resolve({ job: {}, records: [] })
+  );
 
   const fieldTypes = {};
   const testSetup = test
@@ -30,7 +32,7 @@ describe(commandName, () => {
   const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
   testSetup
     .command([commandName].concat(defaultArgs))
-    .it(defaultArgs.join(' '), ctx => {
+    .it(defaultArgs.join(' '), (ctx) => {
       expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
       expect(bulkLoad.calledOnce).to.be.true;
@@ -42,7 +44,7 @@ describe(commandName, () => {
         concurrencyMode: 'Parallel',
         assignmentRuleId: undefined,
         batchSize: 10000,
-        wait: undefined
+        wait: undefined,
       });
     });
 });

@@ -10,7 +10,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
     'Available variables in Node.js scripts',
     '  argv: Parsed command line arguments after the file option',
     '  conn: jsforce Connection',
-    '  context: SfdxCommand'
+    '  context: SfdxCommand',
   ].join('\n');
 
   public static examples = [
@@ -18,7 +18,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
     '$ sfdx kit:script:execute',
     "> await conn.query('SELECT Id, Name FROM Account LIMIT 1')",
     'Top level await is not enabled by default in REPL before Node.js v16',
-    '$ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute'
+    '$ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute',
   ];
 
   public static aliases = ['kit:script'];
@@ -27,7 +27,10 @@ export default class ScriptExecuteCommand extends SfdxCommand {
   protected static requiresProject = false;
 
   protected static flagsConfig = {
-    file: flags.filepath({ char: 'f', description: 'the path of the Node.js script file to execute' })
+    file: flags.filepath({
+      char: 'f',
+      description: 'the path of the Node.js script file to execute',
+    }),
   };
 
   public async run(): Promise<void> {
@@ -38,12 +41,19 @@ export default class ScriptExecuteCommand extends SfdxCommand {
       const fileIndex = process.argv.indexOf(file);
       const argv = yargs([]).parse(process.argv.slice(fileIndex + 1));
       const script = fs.readFileSync(file).toString('utf8');
-      const loader = name => {
+      const loader = (name) => {
         if (name.startsWith('.')) name = path.resolve(path.dirname(file), name);
         return require(name);
       };
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      return await new asyncFunction('require', 'argv', 'context', 'conn', script)(loader, argv, this, this.org?.getConnection());
+      return await new asyncFunction(
+        'require',
+        'argv',
+        'context',
+        'conn',
+        script
+      )(loader, argv, this, this.org?.getConnection());
     } else {
       this.ux.log('Starting sfdx REPL mode');
       this.ux.log('Available variables');
@@ -56,9 +66,7 @@ export default class ScriptExecuteCommand extends SfdxCommand {
       replServer.context.context = this;
       replServer.context.conn = this.org?.getConnection();
 
-      return new Promise(
-        resolve => replServer.on('exit', () => resolve())
-      );
+      return new Promise((resolve) => replServer.on('exit', () => resolve()));
     }
   }
 }

@@ -1,13 +1,13 @@
 export type LayoutAssignment = {
-  layout: string,
-  recordType?: string
+  layout: string;
+  recordType?: string;
 };
 
 export type LayoutAssignmentsPerProfile = {
-  [profile: string]: LayoutAssignment[]
+  [profile: string]: LayoutAssignment[];
 };
 
 export type ProfileMetadata = {
-  fullName: string,
-  layoutAssignments: LayoutAssignment[]
+  fullName: string;
+  layoutAssignments: LayoutAssignment[];
 };

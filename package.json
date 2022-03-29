@@ -26,9 +26,16 @@
     "@types/jest": "^27.4.1",
     "@types/jsforce": "^1.9.29",
     "@types/yargs": "^17.0.8",
+    "@typescript-eslint/eslint-plugin": "^5.16.0",
+    "@typescript-eslint/parser": "^5.16.0",
     "chai": "^4",
+    "eslint": "^8.12.0",
+    "eslint-config-prettier": "^8.5.0",
     "globby": "^11",
+    "husky": "^7.0.4",
     "jest": "^27.5.1",
+    "lint-staged": "^12.3.7",
+    "prettier": "^2.6.1",
     "ts-jest": "^27.1.4",
     "ts-node": "^10",
     "typescript": "^4.2.3"
@@ -64,11 +71,16 @@
   },
   "repository": "Kitalive-Inc/sfdx-plugin",
   "scripts": {
-    "lint": "tslint --project . --config tslint.json --format stylish",
+    "lint": "eslint src/**/*.ts",
     "postpack": "rm -f oclif.manifest.json",
-    "posttest": "tslint -p test -t stylish",
+    "posttest": "yarn lint",
     "prepack": "rm -rf lib && tsc -b && oclif-dev manifest && oclif-dev readme",
+    "prepare": "husky install",
     "test": "jest --coverage",
     "version": "oclif-dev readme && git add README.md"
+  },
+  "lint-staged": {
+    "src/**/*.ts": "yarn lint --fix",
+    "*.ts": "prettier --write"
   }
 }

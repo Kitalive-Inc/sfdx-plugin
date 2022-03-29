@@ -8,15 +8,22 @@ export default class QueryCommand extends SfdxCommand {
   public static description = 'bulk query records';
 
   public static examples = [
-    '$ sfdx kit:data:bulk:query -q \'SELECT Id, Name FROM Account\' -f ./path/to/Account.csv'
+    "$ sfdx kit:data:bulk:query -q 'SELECT Id, Name FROM Account' -f ./path/to/Account.csv",
   ];
 
   protected static requiresUsername = true;
   protected static requiresProject = false;
 
   protected static flagsConfig = {
-    query: flags.string({ char: 'q', required: true, description: 'SOQL query to export' }),
-    csvfile: flags.string({ char: 'f', description: 'output csv file (default: standard output)' })
+    query: flags.string({
+      char: 'q',
+      required: true,
+      description: 'SOQL query to export',
+    }),
+    csvfile: flags.string({
+      char: 'f',
+      description: 'output csv file (default: standard output)',
+    }),
   };
 
   public async run(): Promise<JsonMap[]> {
