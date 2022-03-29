@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sfdx COMMAND
 running command...
 $ sfdx (-v|--version|version)
-@kitalive/sfdx-plugin/0.2.1 darwin-x64 node-v14.15.0
+@kitalive/sfdx-plugin/0.3.0 darwin-x64 node-v16.14.2
 $ sfdx --help [COMMAND]
 USAGE
   $ sfdx COMMAND
@@ -80,7 +80,7 @@ EXAMPLE
   $ sfdx kit:data:bulk:delete -q 'SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:5'
 ```
 
-_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/delete.ts)_
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/bulk/delete.ts)_
 
 ## `sfdx kit:data:bulk:insert -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -165,7 +165,7 @@ EXAMPLES
   $ sfdx kit:data:bulk:insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/insert.ts)_
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/bulk/insert.ts)_
 
 ## `sfdx kit:data:bulk:query -q <string> [-f <string>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -197,7 +197,7 @@ EXAMPLE
   $ sfdx kit:data:bulk:query -q 'SELECT Id, Name FROM Account' -f ./path/to/Account.csv
 ```
 
-_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/query.ts)_
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/bulk/query.ts)_
 
 ## `sfdx kit:data:bulk:update -o <string> -f <filepath> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -282,7 +282,7 @@ EXAMPLES
   $ sfdx kit:data:bulk:update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/update.ts)_
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/bulk/update.ts)_
 
 ## `sfdx kit:data:bulk:upsert -o <string> -f <filepath> -i <string> [-r <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--setnull] [--convertonly] [--concurrencymode <string>] [--assignmentruleid <string>] [-s <integer>] [-w <integer>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -371,7 +371,7 @@ EXAMPLES
   10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sfdx kit:data:csv:convert [-f <filepath>] [-o <filepath>] [-e <string>] [-d <string>] [-q <string>] [--skiplines <integer>] [--trim] [-m <filepath>] [-c <filepath>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -420,7 +420,7 @@ EXAMPLES
   $ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/data/csv/convert.ts)_
 
 ## `sfdx kit:layout:assignments:deploy -f <string> [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -453,7 +453,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sfdx kit:layout:assignments:retrieve -f <string> [-p <string>] [-o <string>] [--merge] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -497,7 +497,7 @@ EXAMPLES
   $ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sfdx kit:script:execute [-f <filepath>] [-u <string>] [--apiversion <string>] [--json] [--loglevel trace|debug|info|warn|error|fatal|TRACE|DEBUG|INFO|WARN|ERROR|FATAL]`
 
@@ -540,5 +540,5 @@ EXAMPLES
   $ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.2.1/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.3.0/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
