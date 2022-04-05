@@ -7,7 +7,7 @@ import {
   LayoutAssignmentsPerProfile,
   ProfileMetadata,
 } from '../../../../types';
-import { chunk } from '../../../../utils';
+import { readMetadata } from '../../../../metadata';
 
 export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
   public static description =
@@ -68,10 +68,11 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
       )}\n\tobjects: ${filterObjects.join(', ')}`
     );
 
-    // limit 10 records per one API call
-    const profiles = await Promise.all(
-      chunk(profileNames, 10).map((names) => this.getProfiles(names))
-    ).then((a) => [].concat(...a));
+    const profiles = (await readMetadata(
+      this.org.getConnection(),
+      'Profile',
+      profileNames
+    )) as ProfileMetadata[];
     for (const profile of profiles) {
       if (!profile.fullName || !profile.layoutAssignments) continue;
       data[profile.fullName] = profile.layoutAssignments
@@ -119,12 +120,6 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
       .getConnection()
       .metadata.list({ type: 'Profile' })
       .then((profiles) => profiles.map((p) => p.fullName));
-  }
-
-  private getProfiles(names: string[]): Promise<ProfileMetadata[]> {
-    return this.org.getConnection().metadata.read('Profile', names) as Promise<
-      ProfileMetadata[]
-    >;
   }
 
   private findFiles(pattern: string): Promise<string[]> {

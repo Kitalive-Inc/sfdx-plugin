@@ -1,5 +1,7 @@
 import { test } from '@salesforce/command/lib/test';
 import Command from '../../../../../src/commands/kit/layout/assignments/retrieve';
+import * as metadata from '../../../../../src/metadata';
+const readMetadata = jest.spyOn(metadata, 'readMetadata');
 
 describe('kit:layout:assignments:retrieve', () => {
   const projectConfig = {
@@ -63,11 +65,9 @@ describe('kit:layout:assignments:retrieve', () => {
       return names;
     });
 
-  const getProfiles = jest
-    .spyOn(Command.prototype, 'getProfiles' as any)
-    .mockImplementation(async (names: string[]) =>
-      names.map((fullName) => ({ fullName, layoutAssignments }))
-    );
+  readMetadata.mockImplementation(async (conn, type, names: string[]) =>
+    names.map((fullName) => ({ fullName, layoutAssignments }))
+  );
 
   const readFile = jest
     .spyOn(Command.prototype, 'readFile' as any)
@@ -83,7 +83,7 @@ describe('kit:layout:assignments:retrieve', () => {
     objectNamesFromLayouts.mockClear();
     findFiles.mockClear();
     getProfileNames.mockClear();
-    getProfiles.mockClear();
+    readMetadata.mockClear();
     readFile.mockClear();
     writeFile.mockClear();
   });
@@ -97,20 +97,8 @@ describe('kit:layout:assignments:retrieve', () => {
       'force-app/**/*.layout-meta.xml'
     );
     expect(getProfileNames).toHaveBeenCalledTimes(1);
-    expect(getProfiles).toHaveBeenCalledTimes(2);
-    expect(getProfiles.mock.calls[0][0]).toEqual([
-      'profile1',
-      'profile2',
-      'profile3',
-      'profile4',
-      'profile5',
-      'profile6',
-      'profile7',
-      'profile8',
-      'profile9',
-      'profile10',
-    ]);
-    expect(getProfiles.mock.calls[1][0]).toEqual(['profile11', 'profile12']);
+    expect(readMetadata).toHaveBeenCalledTimes(1);
+    expect(readMetadata.mock.calls[0][2].length).toBe(12);
     expect(readFile).not.toHaveBeenCalled();
     expect(writeFile).toHaveBeenCalledTimes(1);
 
@@ -153,8 +141,8 @@ describe('kit:layout:assignments:retrieve', () => {
   ]).it('-f config/test.json -p Admin,Standard -o Account,Contact', (ctx) => {
     expect(objectNamesFromLayouts).not.toHaveBeenCalled();
     expect(getProfileNames).not.toHaveBeenCalled();
-    expect(getProfiles).toHaveBeenCalledTimes(1);
-    expect(getProfiles.mock.calls[0][0]).toEqual(['Admin', 'Standard']);
+    expect(readMetadata).toHaveBeenCalledTimes(1);
+    expect(readMetadata.mock.calls[0][2]).toEqual(['Admin', 'Standard']);
     expect(readFile).not.toHaveBeenCalled();
     expect(writeFile).toHaveBeenCalledTimes(1);
 

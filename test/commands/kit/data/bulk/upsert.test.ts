@@ -2,6 +2,7 @@ import { test } from '@salesforce/command/lib/test';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
+import * as utils from '../../../../../src/utils';
 
 const { Readable } = require('stream');
 
@@ -222,7 +223,7 @@ describe(commandName, () => {
       expect(file).toBe('data/mappings.json');
       return Promise.resolve(mapping);
     }) as any)
-    .stub(Command.prototype, 'loadScript', ((file) => {
+    .stub(utils, 'loadScript', ((file) => {
       expect(file).toBe('data/convert.js');
       return { convert };
     }) as any)
@@ -259,9 +260,7 @@ describe(commandName, () => {
 
   const start = jest.fn();
   const finish = jest.fn();
-  jest
-    .spyOn(Command.prototype, 'loadScript')
-    .mockReturnValue({ convert, start, finish });
+  jest.spyOn(utils, 'loadScript').mockReturnValue({ convert, start, finish });
   testSetup
     .command([commandName].concat(defaultArgs, '-c', 'data/converter.js'))
     .it('called converters hooks', (ctx) => {

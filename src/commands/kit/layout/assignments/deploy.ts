@@ -2,11 +2,8 @@ import { flags, SfdxCommand } from '@salesforce/command';
 import * as fs from 'fs-extra';
 import { SaveResult } from 'jsforce';
 import * as path from 'path';
-import {
-  LayoutAssignmentsPerProfile,
-  ProfileMetadata,
-} from '../../../../types';
-import { chunk } from '../../../../utils';
+import { LayoutAssignmentsPerProfile } from '../../../../types';
+import { updateMetadata } from '../../../../metadata';
 
 export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
   public static description = 'deploy page layout assignments from JSON file';
@@ -35,18 +32,11 @@ export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
     const profiles = Object.entries(layoutAssignmentsPerProfile).map(
       ([fullName, layoutAssignments]) => ({ fullName, layoutAssignments })
     );
-    // limit 10 records per one API call
-    return Promise.all(
-      chunk(profiles, 10).map((data) => this.deploy(data))
-    ).then((a) => [].concat(...a));
+    return updateMetadata(this.org.getConnection(), 'Profile', profiles);
   }
 
   private readFile(file): Promise<LayoutAssignmentsPerProfile> {
     const inputFile = path.join(this.project.getPath(), file);
     return fs.readJson(inputFile);
-  }
-
-  private deploy(data: ProfileMetadata[]) {
-    return this.org.getConnection().metadata.update('Profile', data);
   }
 }

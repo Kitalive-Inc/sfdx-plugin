@@ -11,9 +11,7 @@ import {
   JobInfo,
 } from 'jsforce';
 import * as path from 'path';
-import { Readable } from 'stream';
 import CsvConvertCommand from './commands/kit/data/csv/convert';
-import { loadScript, parseCsv } from './commands/kit/data/csv/convert';
 import * as utils from './utils';
 
 type BulkOperation = 'insert' | 'update' | 'upsert' | 'delete' | 'hardDelete';
@@ -223,7 +221,7 @@ export const createBulkCommand = (
       } = this.flags;
 
       const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
-      const script = converter ? this.loadScript(converter) : {};
+      const script = converter ? utils.loadScript(converter) : {};
       const fieldTypes = await this.getFieldTypes(object);
 
       this.ux.startSpinner('Processing csv');
@@ -314,7 +312,7 @@ export const createBulkCommand = (
     }
 
     public async parseCsv(
-      input: Readable,
+      input: NodeJS.ReadableStream,
       options?: {
         encoding?: string;
         delimiter?: string;
@@ -338,7 +336,7 @@ export const createBulkCommand = (
         setnull,
         fieldTypes,
       } = options ?? {};
-      return await parseCsv(input, {
+      return await utils.parseCsv(input, {
         encoding,
         delimiter,
         quote,
@@ -378,10 +376,6 @@ export const createBulkCommand = (
 
     private saveCsv(file, rows) {
       csv.writeToPath(file, rows, { headers: true, writeBOM: true });
-    }
-
-    private loadScript(file) {
-      return loadScript(file);
     }
 
     private async getFieldTypes(sobject) {
