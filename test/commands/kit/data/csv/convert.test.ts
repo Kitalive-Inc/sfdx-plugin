@@ -3,6 +3,7 @@ import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/csv/convert';
 
+jest.setTimeout(10000);
 const commandName = 'kit:data:csv:convert';
 describe(commandName, () => {
   const csvRows = [

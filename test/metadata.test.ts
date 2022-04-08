@@ -117,7 +117,7 @@ describe('upsertMetadata', () => {
 describe('deleteMetadata', () => {
   it('11 objects', async () => {
     const del = jest.fn((type, metadata, callback) =>
-      Promise.resolve(metadata.map((fullName) => ({ fullName })))
+      Promise.resolve(metadata.map((fullName) => ({ fullName, success: true })))
     );
     const conn = new Connection({});
     conn.metadata.delete = del;
@@ -126,6 +126,44 @@ describe('deleteMetadata', () => {
     expect(del).toHaveBeenCalledTimes(2);
     expect(del).toHaveBeenCalledWith('CustomObject', data.slice(0, 10));
     expect(del).toHaveBeenCalledWith('CustomObject', data.slice(10, 11));
-    expect(results).toEqual(data.map((fullName) => ({ fullName })));
+    expect(results).toEqual(
+      data.map((fullName) => ({ fullName, success: true }))
+    );
+  });
+});
+
+describe('getCustomFieldNames', () => {
+  it('returns custom field names', async () => {
+    const records = [
+      { FullName: 'f1__c' },
+      { FullName: 'f2_del__c' },
+      { FullName: 'f3__c' },
+    ];
+    const query = jest.fn(() => ({ records }));
+    const conn = new Connection({});
+    conn.tooling.query = query as any;
+    const results = await metadata.getCustomFieldNames(conn, 'CustomObject__c');
+    expect(query).toHaveBeenCalledWith(
+      "SELECT FullName FROM CustomField WHERE EntityDefinition.QualifiedApiName='CustomObject__c'"
+    );
+    expect(results).toEqual(['f1__c', 'f3__c']);
+  });
+
+  it('single quotes should be escaped', async () => {
+    const query = jest.fn(() => {
+      throw new Error('soql error');
+    });
+    const conn = new Connection({});
+    conn.tooling.query = query as any;
+    try {
+      await metadata.getCustomFieldNames(conn, "object'name");
+    } catch (e) {
+      expect(query).toHaveBeenCalledWith(
+        "SELECT FullName FROM CustomField WHERE EntityDefinition.QualifiedApiName='object\\'name'"
+      );
+      expect(e.message).toBe('soql error');
+      return;
+    }
+    throw new Error('failed to catch errors');
   });
 });
