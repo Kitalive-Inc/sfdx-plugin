@@ -1,3 +1,4 @@
+import { JsonMap } from '@salesforce/ts-types';
 import {
   Connection,
   MetadataInfo,
@@ -9,6 +10,17 @@ import { CustomField } from './types';
 
 interface UpsertResult extends JsforceUpsertResult {
   errors: { message: string };
+}
+
+let orgNamespace;
+export async function getOrgNamespace(conn: Connection): Promise<string> {
+  if (orgNamespace === undefined) {
+    const {
+      records: [{ NamespacePrefix }],
+    } = await conn.query('SELECT NamespacePrefix FROM Organization');
+    orgNamespace = NamespacePrefix;
+  }
+  return orgNamespace;
 }
 
 export function chunkMetadata<T>(type: string, metadata: T | T[]): Array<T[]> {
@@ -64,31 +76,36 @@ export function deleteMetadata(
   ).then((a) => a.flat());
 }
 
-export async function getCustomFieldNames(
-  conn: Connection,
-  object: string
-): Promise<string[]> {
-  const escapedObject = object.replace(/'/g, "\\'");
-  const { records } = await conn.tooling.query(
-    `SELECT FullName FROM CustomField WHERE EntityDefinition.QualifiedApiName='${escapedObject}'`
-  );
-  return records
-    .map((r) => r['FullName'])
-    .filter((n) => !n.endsWith('_del__c'));
-}
-
 export async function getCustomFields(
   conn: Connection,
   object: string
 ): Promise<CustomField[]> {
-  const fullNames = await getCustomFieldNames(conn, object);
-  const results: CustomField[] = await readMetadata(
-    conn,
-    'CustomField',
-    fullNames
-  );
-  for (const result of results) {
-    result.fullName = result.fullName.slice(object.length + 1);
+  let namespace;
+  const parts = object.split('__');
+  if (object.endsWith('__c')) {
+    if (parts.length == 3) {
+      namespace = parts[0];
+    } else if (parts.length == 2) {
+      namespace = await getOrgNamespace(conn);
+      if (namespace) object = `${namespace}__${object}`;
+    }
   }
-  return results;
+
+  const { records } = await conn.tooling.query(
+    `SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='${object}' AND ManageableState = 'unmanaged'`
+  );
+  return (records as Array<{ DeveloperName: string; Metadata: JsonMap }>)
+    .filter((r) => !r.DeveloperName.endsWith('_del'))
+    .map((r) => ({
+      fullName: r.DeveloperName + '__c',
+      ...r.Metadata,
+    }));
+}
+
+export async function getCustomFieldMap(
+  conn: Connection,
+  object: string
+): Promise<Map<string, CustomField>> {
+  const fields = await getCustomFields(conn, object);
+  return new Map(fields.map((f) => [f.fullName, f]));
 }

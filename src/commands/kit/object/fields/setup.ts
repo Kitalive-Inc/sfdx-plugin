@@ -3,7 +3,8 @@ import * as fs from 'fs-extra';
 import {
   upsertMetadata,
   deleteMetadata,
-  getCustomFields,
+  getCustomFieldMap,
+  getOrgNamespace,
 } from '../../../../metadata';
 import { CustomField } from '../../../../types';
 import { parseCsv } from '../../../../utils';
@@ -63,6 +64,9 @@ export function setFieldOptions(field, existingField) {
       setDefault('visibleLines', 4);
       setPicklistOptions(field, existingField);
       break;
+    case 'Lookup':
+      if (field.required === 'true') field.deleteConstraint = 'Restrict';
+      break;
   }
 }
 
@@ -74,6 +78,8 @@ function setPicklistOptions(field, existingField) {
       : { restricted: true };
     if (restricted !== undefined) valueSet.restricted = restricted;
     if (restricted === 'false') delete valueSet.restricted;
+    if (valueSet.controllingField === null) delete valueSet.controllingField;
+    if (valueSet.valueSettings === null) delete valueSet.valueSettings;
     if (values) {
       valueSet.valueSetDefinition ??= { value: [] };
       const optionMap = new Map(
@@ -136,38 +142,27 @@ export default class FieldsSetupCommand extends SfdxCommand {
   public async run(): Promise<SetupResult[]> {
     const { object, file, delete: del, force } = this.flags;
     const conn = this.org.getConnection();
+    const namespace = await getOrgNamespace(conn);
+    const pattern = namespace ? new RegExp(`^${namespace}__`, 'g') : null;
+    const removeNamespace = (name: string) =>
+      pattern ? name.replace(pattern, '') : name;
+
     this.ux.startSpinner('parse ' + file);
     const fields = (await parseCsv(
       fs.createReadStream(file)
     )) as unknown as CustomField[];
-    const identicalFieldNames = [];
-    const upsertFields = [];
+    this.ux.stopSpinner();
 
-    const existingFields = await getCustomFields(conn, object);
-    const existingFieldMap = new Map(
-      existingFields.map((f) => [f.fullName, f])
-    );
+    const existingFieldMap = await getCustomFieldMap(conn, object);
+    const oldFieldMap = new Map(existingFieldMap);
 
     for (const field of fields) {
-      const existingField = existingFieldMap.get(field.fullName);
-      existingFieldMap.delete(field.fullName);
+      const name = removeNamespace(field.fullName);
+      const existingField = existingFieldMap.get(name);
+      existingFieldMap.delete(name);
       setFieldOptions(field, existingField);
-
-      const identical =
-        existingField &&
-        Object.entries(field).every(
-          ([key, value]) => existingField[key] == value
-        );
-      if (identical) {
-        identicalFieldNames.push(field.fullName);
-      } else {
-        upsertFields.push({
-          ...field,
-          fullName: `${object}.${field.fullName}`,
-        });
-      }
+      field.fullName = `${object}.${field.fullName}`;
     }
-    this.ux.stopSpinner();
 
     let deleteFields = del ? [...existingFieldMap.values()] : [];
     if (deleteFields.length && !force) {
@@ -179,17 +174,23 @@ export default class FieldsSetupCommand extends SfdxCommand {
       if (!confirmed) deleteFields = [];
     }
 
-    const result = [];
-    if (upsertFields.length) {
+    const results = [];
+    if (fields.length) {
       this.ux.startSpinner('upsert fields');
-      for (const { fullName, created, success, errors } of await upsertMetadata(
-        conn,
-        'CustomField',
-        upsertFields
-      )) {
-        result.push({
-          field: fullName.slice(object.length + 1),
-          result: created ? 'created' : success ? 'updated' : 'error',
+      const upsertResults = await upsertMetadata(conn, 'CustomField', fields);
+      const newFieldMap = await getCustomFieldMap(conn, object);
+      for (const { fullName, created, success, errors } of upsertResults) {
+        const name = fullName.slice(object.length + 1);
+        let result = created ? 'created' : success ? 'updated' : 'error';
+        if (
+          result === 'updated' &&
+          deepEquals(newFieldMap.get(name), oldFieldMap.get(name))
+        ) {
+          result = 'identical';
+        }
+        results.push({
+          field: name,
+          result,
           error: Array.isArray(errors)
             ? errors.map((e) => e.message).join(', ')
             : errors?.message,
@@ -206,7 +207,7 @@ export default class FieldsSetupCommand extends SfdxCommand {
         'CustomField',
         names
       )) {
-        result.push({
+        results.push({
           field: fullName.slice(object.length + 1),
           result: success ? 'deleted' : 'error',
           error: Array.isArray(errors)
@@ -217,12 +218,8 @@ export default class FieldsSetupCommand extends SfdxCommand {
       this.ux.stopSpinner();
     }
 
-    for (const field of identicalFieldNames) {
-      result.push({ field, result: 'identical' });
-    }
-
     this.ux.styledHeader('Fields setup result');
-    this.ux.table(result, ['field', 'result', 'error']);
-    return result;
+    this.ux.table(results, ['field', 'result', 'error']);
+    return results;
   }
 }

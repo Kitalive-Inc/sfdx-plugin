@@ -132,38 +132,42 @@ describe('deleteMetadata', () => {
   });
 });
 
-describe('getCustomFieldNames', () => {
-  it('returns custom field names', async () => {
+describe('getCustomFields', () => {
+  it('returns custom fields', async () => {
     const records = [
-      { FullName: 'f1__c' },
-      { FullName: 'f2_del__c' },
-      { FullName: 'f3__c' },
+      { DeveloperName: 'f1', Metadata: { label: 'field1' } },
+      { DeveloperName: 'f2_del', Metadata: { label: 'field2' } },
+      { DeveloperName: 'f3', Metadata: { label: 'field3' } },
     ];
-    const query = jest.fn(() => ({ records }));
     const conn = new Connection({});
-    conn.tooling.query = query as any;
-    const results = await metadata.getCustomFieldNames(conn, 'CustomObject__c');
-    expect(query).toHaveBeenCalledWith(
-      "SELECT FullName FROM CustomField WHERE EntityDefinition.QualifiedApiName='CustomObject__c'"
-    );
-    expect(results).toEqual(['f1__c', 'f3__c']);
-  });
+    const toolingQuery = jest.fn(() => ({ records }));
+    conn.tooling.query = toolingQuery as any;
+    let orgNamespace;
+    const query = jest.fn(() => ({
+      records: [{ NamespacePrefix: orgNamespace }],
+    }));
+    conn.query = query as any;
 
-  it('single quotes should be escaped', async () => {
-    const query = jest.fn(() => {
-      throw new Error('soql error');
-    });
-    const conn = new Connection({});
-    conn.tooling.query = query as any;
-    try {
-      await metadata.getCustomFieldNames(conn, "object'name");
-    } catch (e) {
-      expect(query).toHaveBeenCalledWith(
-        "SELECT FullName FROM CustomField WHERE EntityDefinition.QualifiedApiName='object\\'name'"
-      );
-      expect(e.message).toBe('soql error');
-      return;
-    }
-    throw new Error('failed to catch errors');
+    let results = await metadata.getCustomFields(conn, 'ns__CustomObject__c');
+    expect(toolingQuery).toHaveBeenCalledWith(
+      "SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='ns__CustomObject__c' AND ManageableState = 'unmanaged'"
+    );
+    expect(query).not.toHaveBeenCalled();
+    expect(results).toEqual([
+      { fullName: 'f1__c', label: 'field1' },
+      { fullName: 'f3__c', label: 'field3' },
+    ]);
+
+    results = await metadata.getCustomFields(conn, 'CustomObject__c');
+    expect(query).toHaveBeenCalled();
+    expect(toolingQuery).toHaveBeenCalledWith(
+      "SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='CustomObject__c' AND ManageableState = 'unmanaged'"
+    );
+
+    orgNamespace = 'defaultns';
+    results = await metadata.getCustomFields(conn, 'CustomObject__c');
+    expect(toolingQuery).toHaveBeenCalledWith(
+      "SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='defaultns__CustomObject__c' AND ManageableState = 'unmanaged'"
+    );
   });
 });
