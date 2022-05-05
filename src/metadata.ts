@@ -23,6 +23,34 @@ export async function getOrgNamespace(conn: Connection): Promise<string> {
   return orgNamespace;
 }
 
+export async function completeDefaultNamespace(
+  conn: Connection,
+  objectName: string
+): Promise<string>;
+export async function completeDefaultNamespace(
+  conn: Connection,
+  objectNames: string[]
+): Promise<string[]>;
+export async function completeDefaultNamespace(
+  conn: Connection,
+  objectName: string | string[]
+): Promise<string | string[]> {
+  const ns = await getOrgNamespace(conn);
+  if (!ns) return objectName;
+
+  const isArray = Array.isArray(objectName);
+  const objectNames = isArray ? objectName : [objectName];
+  const results = objectNames.map((name) => {
+    if (name.endsWith('__c') && name.split('__').length === 2) {
+      return `${ns}__${name}`;
+    } else {
+      return name;
+    }
+  });
+
+  return isArray ? results : results[0];
+}
+
 export function chunkMetadata<T>(type: string, metadata: T | T[]): Array<T[]> {
   // metadata limit: https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_createMetadata.htm
   const size =
@@ -80,17 +108,7 @@ export async function getCustomFields(
   conn: Connection,
   object: string
 ): Promise<CustomField[]> {
-  let namespace;
-  const parts = object.split('__');
-  if (object.endsWith('__c')) {
-    if (parts.length == 3) {
-      namespace = parts[0];
-    } else if (parts.length == 2) {
-      namespace = await getOrgNamespace(conn);
-      if (namespace) object = `${namespace}__${object}`;
-    }
-  }
-
+  object = await completeDefaultNamespace(conn, object);
   const { records } = await conn.tooling.query(
     `SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='${object}' AND ManageableState = 'unmanaged'`
   );

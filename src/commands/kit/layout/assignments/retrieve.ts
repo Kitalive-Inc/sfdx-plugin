@@ -8,7 +8,7 @@ import {
   LayoutAssignmentsPerProfile,
   ProfileMetadata,
 } from '../../../../types';
-import { readMetadata } from '../../../../metadata';
+import { completeDefaultNamespace, readMetadata } from '../../../../metadata';
 
 function assignmentsPerObject(
   assignments: LayoutAssignment[],
@@ -84,8 +84,9 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
       )}\n\tobjects: ${filterObjects.join(', ')}`
     );
 
+    const conn = this.org.getConnection();
     const profiles = (await readMetadata(
-      this.org.getConnection(),
+      conn,
       'Profile',
       profileNames
     )) as ProfileMetadata[];
@@ -93,7 +94,7 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
       if (!profile.fullName || !profile.layoutAssignments) continue;
       let assignmentsMap = assignmentsPerObject(
         profile.layoutAssignments,
-        filterObjects
+        await completeDefaultNamespace(conn, filterObjects as string[])
       );
       if (data[profile.fullName]) {
         const oldAssignmentsMap = assignmentsPerObject(data[profile.fullName]);

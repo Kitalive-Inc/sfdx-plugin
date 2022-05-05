@@ -2,6 +2,10 @@ import { test } from '@salesforce/command/lib/test';
 import Command from '../../../../../src/commands/kit/layout/assignments/retrieve';
 import * as metadata from '../../../../../src/metadata';
 const readMetadata = jest.spyOn(metadata, 'readMetadata');
+const completeDefaultNamespace = jest.spyOn(
+  metadata,
+  'completeDefaultNamespace'
+);
 
 describe('kit:layout:assignments:retrieve', () => {
   const projectConfig = {
@@ -68,6 +72,7 @@ describe('kit:layout:assignments:retrieve', () => {
   readMetadata.mockImplementation(async (conn, type, names: string[]) =>
     names.map((fullName) => ({ fullName, layoutAssignments }))
   );
+  completeDefaultNamespace.mockImplementation(async (conn, names) => names);
 
   const readFile = jest
     .spyOn(Command.prototype, 'readFile' as any)

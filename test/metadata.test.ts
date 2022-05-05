@@ -152,14 +152,12 @@ describe('getCustomFields', () => {
     expect(toolingQuery).toHaveBeenCalledWith(
       "SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='ns__CustomObject__c' AND ManageableState = 'unmanaged'"
     );
-    expect(query).not.toHaveBeenCalled();
     expect(results).toEqual([
       { fullName: 'f1__c', label: 'field1' },
       { fullName: 'f3__c', label: 'field3' },
     ]);
 
     results = await metadata.getCustomFields(conn, 'CustomObject__c');
-    expect(query).toHaveBeenCalled();
     expect(toolingQuery).toHaveBeenCalledWith(
       "SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='CustomObject__c' AND ManageableState = 'unmanaged'"
     );
