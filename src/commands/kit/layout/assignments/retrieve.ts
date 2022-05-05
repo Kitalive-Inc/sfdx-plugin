@@ -4,10 +4,26 @@ import * as glob from 'fast-glob';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import {
+  LayoutAssignment,
   LayoutAssignmentsPerProfile,
   ProfileMetadata,
 } from '../../../../types';
 import { readMetadata } from '../../../../metadata';
+
+function assignmentsPerObject(
+  assignments: LayoutAssignment[],
+  filterObjects?: string[]
+) {
+  const result = new Map();
+  for (const assignment of assignments) {
+    const object = assignment.layout.split('-')[0];
+    if (filterObjects && !filterObjects.includes(object)) continue;
+    const a = result.get(object) ?? [];
+    a.push(assignment);
+    result.set(object, a);
+  }
+  return result;
+}
 
 export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
   public static description =
@@ -75,10 +91,16 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
     )) as ProfileMetadata[];
     for (const profile of profiles) {
       if (!profile.fullName || !profile.layoutAssignments) continue;
-      data[profile.fullName] = profile.layoutAssignments
-        .filter((assignment) =>
-          filterObjects.includes(assignment.layout.split('-')[0])
-        )
+      let assignmentsMap = assignmentsPerObject(
+        profile.layoutAssignments,
+        filterObjects
+      );
+      if (data[profile.fullName]) {
+        const oldAssignmentsMap = assignmentsPerObject(data[profile.fullName]);
+        assignmentsMap = new Map([...oldAssignmentsMap, ...assignmentsMap]);
+      }
+      data[profile.fullName] = Array.from(assignmentsMap.values())
+        .flat()
         .sort((a, b) => a.layout.localeCompare(b.layout));
     }
 
