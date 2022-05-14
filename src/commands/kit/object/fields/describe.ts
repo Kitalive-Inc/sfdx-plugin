@@ -67,7 +67,7 @@ export default class FieldsDescribeCommand extends SfdxCommand {
           row.restricted = restricted;
           if (valueSetDefinition) {
             row.values = valueSetDefinition.value
-              .map((v) => v.fullName)
+              .map((v) => v.valueName)
               .join(';');
           } else {
             row.valueSetName = valueSetName;

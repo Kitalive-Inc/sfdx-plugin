@@ -13,9 +13,9 @@ describe(command, () => {
         restricted: false,
         valueSetDefinition: {
           value: [
-            { fullName: 'item1', label: 'item1' },
-            { fullName: 'item2', label: 'item2' },
-            { fullName: 'item3', label: 'item3' },
+            { valueName: 'item1', label: 'item1' },
+            { valueName: 'item2', label: 'item2' },
+            { valueName: 'item3', label: 'item3' },
           ],
         },
       },

@@ -15,7 +15,8 @@ export type ProfileMetadata = {
 };
 
 interface CustomValue {
-  fullName: string;
+  fullName?: string;
+  valueName?: string;
   label: string;
   default?: boolean;
 }
