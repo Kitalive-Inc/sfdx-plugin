@@ -33,7 +33,7 @@ export function setFieldOptions(field, existingField) {
 
   switch (field.type) {
     case 'Checkbox':
-      setDefault('defaultValue', false);
+      if (!field.formula) setDefault('defaultValue', false);
       break;
     case 'Currency':
     case 'Number':
