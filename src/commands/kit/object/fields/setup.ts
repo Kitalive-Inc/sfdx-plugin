@@ -42,7 +42,7 @@ export function setFieldOptions(field, existingField) {
       setDefault('scale', 0);
       break;
     case 'Text':
-      setDefault('length', 255);
+      if (!field.formula) setDefault('length', 255);
       break;
     case 'EncryptedText':
       setDefault('length', 175);
