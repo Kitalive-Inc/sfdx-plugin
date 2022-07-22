@@ -24,7 +24,7 @@ export function setFieldOptions(field, existingField) {
     if (value === '') delete field[key];
   }
 
-  if (field.formula && existingField)
+  if (field.formula && existingField?.formulaTreatBlanksAs != null)
     field.formulaTreatBlanksAs ??= existingField.formulaTreatBlanksAs;
 
   const setDefault = (name, value) => {
