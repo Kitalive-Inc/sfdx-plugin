@@ -167,7 +167,10 @@ describe('setFieldOptions', () => {
           valueSet: { restricted: true, valueSetName: 'set1' },
         });
         expect(
-          subject(type, { restricted: false, values: 'item1;item2' })
+          subject(type, {
+            restricted: false,
+            values: 'item1;item2\nitem3 : item3_label',
+          })
         ).toMatchObject({
           valueSet: {
             restricted: false,
@@ -175,6 +178,7 @@ describe('setFieldOptions', () => {
               value: [
                 { fullName: 'item1', label: 'item1' },
                 { fullName: 'item2', label: 'item2' },
+                { fullName: 'item3', label: 'item3_label' },
               ],
             },
           },
@@ -194,7 +198,10 @@ describe('setFieldOptions', () => {
         expect(
           subject(
             type,
-            { restricted: false, values: 'item3;item1' },
+            {
+              restricted: false,
+              values: 'item3;item1: item1_label\nitem4: item4_label',
+            },
             {
               valueSet: {
                 restricted: true,
@@ -213,7 +220,8 @@ describe('setFieldOptions', () => {
             valueSetDefinition: {
               value: [
                 { fullName: 'item3', label: 'item3' },
-                { fullName: 'item1', label: 'item1', default: true },
+                { fullName: 'item1', label: 'item1_label', default: true },
+                { fullName: 'item4', label: 'item4_label' },
               ],
             },
           },

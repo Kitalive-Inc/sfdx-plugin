@@ -15,7 +15,7 @@ describe(command, () => {
           value: [
             { valueName: 'item1', label: 'item1' },
             { valueName: 'item2', label: 'item2' },
-            { valueName: 'item3', label: 'item3' },
+            { valueName: 'item3_value', label: 'item3' },
           ],
         },
       },
@@ -49,7 +49,7 @@ describe(command, () => {
           fullName: 'Picklist__c',
           type: 'Picklist',
           restricted: false,
-          values: 'item1;item2;item3',
+          values: 'item1\nitem2\nitem3_value: item3',
         },
         {
           fullName: 'MultiSelectPicklist__c',

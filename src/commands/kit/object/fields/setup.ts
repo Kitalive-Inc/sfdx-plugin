@@ -88,11 +88,12 @@ function setPicklistOptions(field, existingField) {
           option,
         ])
       );
-      const options = values
-        .split(';')
-        .map(
-          (value) => optionMap.get(value) ?? { fullName: value, label: value }
-        );
+      const options = values.split(/;|[\r\n]+/).map((value) => {
+        const [name, label] = value.split(/\s*:\s*/);
+        const option = optionMap.get(name) ?? { fullName: name };
+        option['label'] = label ? label : name;
+        return option;
+      });
       valueSet.valueSetDefinition.value = options;
       delete valueSet.valueSetName;
     } else {
