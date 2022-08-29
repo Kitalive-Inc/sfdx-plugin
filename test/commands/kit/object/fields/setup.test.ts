@@ -176,9 +176,9 @@ describe('setFieldOptions', () => {
             restricted: false,
             valueSetDefinition: {
               value: [
-                { fullName: 'item1', label: 'item1' },
-                { fullName: 'item2', label: 'item2' },
-                { fullName: 'item3', label: 'item3_label' },
+                { valueName: 'item1', label: 'item1' },
+                { valueName: 'item2', label: 'item2' },
+                { valueName: 'item3', label: 'item3_label' },
               ],
             },
           },
@@ -207,8 +207,8 @@ describe('setFieldOptions', () => {
                 restricted: true,
                 valueSetDefinition: {
                   value: [
-                    { fullName: 'item1', label: 'item1', default: true },
-                    { fullName: 'item2', label: 'item2' },
+                    { valueName: 'item1', label: 'item1', default: true },
+                    { valueName: 'item2', label: 'item2' },
                   ],
                 },
               },
@@ -219,9 +219,47 @@ describe('setFieldOptions', () => {
             restricted: false,
             valueSetDefinition: {
               value: [
-                { fullName: 'item3', label: 'item3' },
-                { fullName: 'item1', label: 'item1_label', default: true },
-                { fullName: 'item4', label: 'item4_label' },
+                { valueName: 'item3', label: 'item3' },
+                { valueName: 'item1', label: 'item1_label', default: true },
+                { valueName: 'item4', label: 'item4_label' },
+              ],
+            },
+          },
+        });
+
+        expect(
+          subject(
+            type,
+            {
+              values:
+                'item1: item1_label_change\nitem2_api_change: item2\n4: item4',
+            },
+            {
+              valueSet: {
+                restricted: true,
+                valueSetDefinition: {
+                  value: [
+                    { valueName: 'item1', label: 'item1', default: true },
+                    { valueName: 'item2', label: 'item2' },
+                    { valueName: 'item3', label: 'item3' },
+                  ],
+                },
+              },
+            }
+          )
+        ).toMatchObject({
+          valueSet: {
+            restricted: true,
+            valueSetDefinition: {
+              value: [
+                {
+                  valueName: 'item1',
+                  label: 'item1_label_change',
+                  default: true,
+                },
+                { valueName: 'item2_api_change', label: 'item2' },
+                { valueName: '4', label: 'item4' },
+                { valueName: 'item2', label: 'item2_del', isActive: false },
               ],
             },
           },

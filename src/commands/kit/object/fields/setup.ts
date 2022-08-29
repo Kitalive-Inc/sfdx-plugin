@@ -6,7 +6,7 @@ import {
   getCustomFieldMap,
   getOrgNamespace,
 } from '../../../../metadata';
-import { CustomField } from '../../../../types';
+import { CustomField, CustomValue } from '../../../../types';
 import { parseCsv } from '../../../../utils';
 
 type SetupResult = {
@@ -82,18 +82,33 @@ function setPicklistOptions(field, existingField) {
     if (valueSet.valueSettings === null) delete valueSet.valueSettings;
     if (values) {
       valueSet.valueSetDefinition ??= { value: [] };
-      const optionMap = new Map(
+      const oldOptionMap = new Map<string, CustomValue>(
         valueSet.valueSetDefinition.value.map((option) => [
-          option.fullName,
-          option,
+          option.valueName,
+          Object.fromEntries(
+            Object.entries(option).filter((keyval) => keyval[1] !== null)
+          ),
         ])
       );
       const options = values.split(/;|[\r\n]+/).map((value) => {
         const [name, label] = value.split(/\s*:\s*/);
-        const option = optionMap.get(name) ?? { fullName: name };
+        const option =
+          oldOptionMap.get(name) ?? ({ valueName: name } as CustomValue);
         option['label'] = label ? label : name;
+        oldOptionMap.delete(name);
         return option;
       });
+
+      // handle options to be deleted
+      if (oldOptionMap.size) {
+        const newOptionMap = new Map(options.map((o) => [o['label'], o]));
+        for (const { valueName, label } of oldOptionMap.values()) {
+          // detect API name changes and change label to avoid duplicate labels
+          if (newOptionMap.has(label))
+            options.push({ valueName, label: label + '_del', isActive: false });
+        }
+      }
+
       valueSet.valueSetDefinition.value = options;
       delete valueSet.valueSetName;
     } else {

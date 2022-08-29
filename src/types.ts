@@ -14,9 +14,8 @@ export type ProfileMetadata = {
   layoutAssignments: LayoutAssignment[];
 };
 
-interface CustomValue {
-  fullName?: string;
-  valueName?: string;
+export interface CustomValue {
+  valueName: string;
   label: string;
   default?: boolean;
 }
