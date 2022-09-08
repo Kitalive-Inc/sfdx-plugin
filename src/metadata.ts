@@ -104,15 +104,48 @@ export function deleteMetadata(
   ).then((a) => a.flat());
 }
 
+type ToolingCustomField = { DeveloperName: string; Metadata: JsonMap };
 export async function getCustomFields(
   conn: Connection,
   object: string
 ): Promise<CustomField[]> {
   object = await completeDefaultNamespace(conn, object);
-  const { records } = await conn.tooling.query(
-    `SELECT DeveloperName, Metadata FROM CustomField WHERE EntityDefinition.QualifiedApiName='${object}' AND ManageableState = 'unmanaged'`
-  );
-  return (records as Array<{ DeveloperName: string; Metadata: JsonMap }>)
+  const [org] = await conn
+    .sobject('Organization')
+    .select(['IsSandbox', 'TrialExpirationDate']);
+  const condition = {
+    'EntityDefinition.QualifiedApiName': object,
+    ManageableState: 'unmanaged',
+    $not: { DeveloperName: { $like: '_tc%' } },
+  };
+
+  let fields: ToolingCustomField[] = [];
+  if (org['IsSandbox'] && org['TrialExpirationDate']) {
+    // scratch org
+    fields = (await conn.tooling
+      .sobject('CustomField')
+      .find(
+        condition,
+        'DeveloperName, Metadata'
+      )) as unknown as ToolingCustomField[];
+  } else {
+    // Avoid error when including metadata field
+    const ids = (
+      await conn.tooling.sobject('CustomField').find(condition, 'Id')
+    ).map((r) => r['Id']);
+    for (const Id of ids) {
+      fields = fields.concat(
+        (await conn.tooling
+          .sobject('CustomField')
+          .find(
+            { ...condition, Id },
+            'DeveloperName, Metadata'
+          )) as unknown as ToolingCustomField
+      );
+    }
+  }
+
+  return fields
     .filter((r) => !r.DeveloperName.endsWith('_del'))
     .map((r) => ({
       fullName: r.DeveloperName + '__c',
