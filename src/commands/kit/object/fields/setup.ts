@@ -71,6 +71,7 @@ export function setFieldOptions(field, existingField) {
 }
 
 function setPicklistOptions(field, existingField) {
+  if (existingField && field.type !== existingField.type) existingField = null;
   const { restricted, values, valueSetName } = field;
   if (values || valueSetName) {
     const valueSet = existingField
@@ -193,6 +194,7 @@ export default class FieldsSetupCommand extends SfdxCommand {
     const results = [];
     if (fields.length) {
       this.ux.startSpinner('upsert fields');
+      this.logger.debug(fields);
       const upsertResults = await upsertMetadata(conn, 'CustomField', fields);
       const newFieldMap = await getCustomFieldMap(conn, object);
       for (const { fullName, created, success, errors } of upsertResults) {
@@ -217,6 +219,7 @@ export default class FieldsSetupCommand extends SfdxCommand {
 
     if (deleteFields.length) {
       this.ux.startSpinner('delete fields');
+      this.logger.debug(deleteFields);
       const names = deleteFields.map(({ fullName }) => `${object}.${fullName}`);
       for (const { fullName, success, errors } of await deleteMetadata(
         conn,
