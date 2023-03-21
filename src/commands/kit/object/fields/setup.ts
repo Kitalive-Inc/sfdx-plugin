@@ -32,6 +32,10 @@ export function setFieldOptions(field, existingField) {
   };
 
   switch (field.type) {
+    case 'AutoNumber':
+      if (existingField?.displayFormat)
+        field.displayFormat = existingField.displayFormat;
+      break;
     case 'Checkbox':
       if (!field.formula) setDefault('defaultValue', false);
       break;
@@ -55,6 +59,8 @@ export function setFieldOptions(field, existingField) {
       setDefault('visibleLines', 10);
       break;
     case 'Location':
+      if (existingField)
+        field.displayLocationInDecimal = existingField.displayLocationInDecimal;
       setDefault('scale', 5);
       break;
     case 'Picklist':
@@ -64,9 +70,55 @@ export function setFieldOptions(field, existingField) {
       setDefault('visibleLines', 4);
       setPicklistOptions(field, existingField);
       break;
-    case 'Lookup':
-      if (field.required === 'true') field.deleteConstraint = 'Restrict';
+    case 'MasterDetail':
+      if (existingField) {
+        field.writeRequiresMasterRead = existingField.writeRequiresMasterRead;
+        field.reparentableMasterDetail = existingField.reparentableMasterDetail;
+      }
+      setReferenceOptions(field, existingField);
       break;
+    case 'Lookup':
+      if (existingField)
+        field.deleteConstraint = existingField.deleteConstraint;
+      if (field.required === 'true') field.deleteConstraint = 'Restrict';
+      setReferenceOptions(field, existingField);
+      break;
+    case 'Summary':
+      if (existingField?.summaryFilterItems)
+        field.summaryFilterItems = normalizeFilterItems(
+          existingField.summaryFilterItems
+        );
+      break;
+  }
+}
+
+function normalizeFilterItems(items) {
+  return items.map((item) => {
+    item = { ...item };
+    if (item.value === null) delete item.value;
+    if (item.valueField === null) delete item.valueField;
+    return item;
+  });
+}
+
+function setReferenceOptions(field, existingField) {
+  if (!existingField) return;
+  if (existingField.relationshipLabel !== null)
+    field.relationshipLabel = existingField.relationshipLabel;
+  if (existingField.lookupFilter) {
+    field.lookupFilter = { ...existingField.lookupFilter };
+    if (field.lookupFilter.booleanFilter === null)
+      delete field.lookupFilter.booleanFilter;
+    if (field.lookupFilter.description === null)
+      delete field.lookupFilter.description;
+    if (field.lookupFilter.errorMessage === null)
+      delete field.lookupFilter.errorMessage;
+    if (field.lookupFilter.infoMessage === null)
+      delete field.lookupFilter.infoMessage;
+    if (field.lookupFilter.filterItems)
+      field.lookupFilter.filterItems = normalizeFilterItems(
+        existingField.lookupFilter.filterItems
+      );
   }
 }
 
@@ -78,7 +130,8 @@ function setPicklistOptions(field, existingField) {
       ? deepCopy(existingField.valueSet)
       : { restricted: true };
     if (restricted !== undefined) valueSet.restricted = restricted;
-    if (restricted === 'false') delete valueSet.restricted;
+    if (restricted === 'false' || valueSet.restricted === null)
+      delete valueSet.restricted;
     if (valueSet.controllingField === null) delete valueSet.controllingField;
     if (valueSet.valueSettings === null) delete valueSet.valueSettings;
     if (values) {
