@@ -148,14 +148,14 @@ function setPicklistOptions(field, existingField) {
         const [name, label] = value.split(/\s*:\s*/);
         const option =
           oldOptionMap.get(name) ?? ({ valueName: name } as CustomValue);
-        option['label'] = label ? label : name;
+        option.label = label ?? name;
         oldOptionMap.delete(name);
         return option;
       });
 
       // handle options to be deleted
       if (oldOptionMap.size) {
-        const newOptionMap = new Map(options.map((o) => [o['label'], o]));
+        const newOptionMap = new Map(options.map((o) => [o.label, o]));
         for (const { valueName, label } of oldOptionMap.values()) {
           // detect API name changes and change label to avoid duplicate labels
           if (newOptionMap.has(label))
@@ -262,9 +262,7 @@ export default class FieldsSetupCommand extends SfdxCommand {
         results.push({
           field: name,
           result,
-          error: Array.isArray(errors)
-            ? errors.map((e) => e.message).join(', ')
-            : errors?.message,
+          error: errors.map((e) => e.message).join(', '),
         });
       }
       this.ux.stopSpinner();
@@ -282,9 +280,7 @@ export default class FieldsSetupCommand extends SfdxCommand {
         results.push({
           field: fullName.slice(object.length + 1),
           result: success ? 'deleted' : 'error',
-          error: Array.isArray(errors)
-            ? errors.map((e) => e.message).join(', ')
-            : errors?.message,
+          error: errors.map((e) => e.message).join(', '),
         });
       }
       this.ux.stopSpinner();

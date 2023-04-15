@@ -1,8 +1,8 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
-import { MetadataInfo } from 'jsforce';
 import { getCustomFields } from '../../../../metadata';
+import { CustomField } from '../../../../types';
 
 const csvHeaders = [
   'label',
@@ -54,7 +54,7 @@ export default class FieldsDescribeCommand extends SfdxCommand {
     }),
   };
 
-  public async run(): Promise<MetadataInfo[]> {
+  public async run(): Promise<CustomField[]> {
     const { object, file, json } = this.flags;
     const conn = this.org.getConnection();
     this.ux.startSpinner(`describe ${object} fields`);

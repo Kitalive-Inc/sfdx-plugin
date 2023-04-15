@@ -1,6 +1,6 @@
 import { flags, SfdxCommand } from '@salesforce/command';
 import * as fs from 'fs-extra';
-import { SaveResult } from 'jsforce';
+import { SaveResult } from 'jsforce/api/metadata';
 import * as path from 'path';
 import { LayoutAssignmentsPerProfile } from '../../../../types';
 import { updateMetadata } from '../../../../metadata';

@@ -1,4 +1,5 @@
-import { test } from '@salesforce/command/lib/test';
+import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
+import { stubMethod, spyMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
@@ -123,6 +124,7 @@ describe('.parseCsv', () => {
 
 const commandName = 'kit:data:bulk:upsert';
 describe(commandName, () => {
+  const $$ = testSetup();
   const csvRows = [
     {
       'Account.ExternalId__c': 'code1',
@@ -142,56 +144,52 @@ describe(commandName, () => {
   ];
 
   const fieldTypes = {};
-  jest.spyOn(Command.prototype, 'getFieldTypes').mockReturnValue(fieldTypes);
-  const createReadStream = jest
-    .spyOn(fs, 'createReadStream')
-    .mockReturnValue(csv.write(csvRows));
-  const parseCsv = jest
-    .spyOn(Command.prototype, 'parseCsv')
-    .mockReturnValue(Promise.resolve(csvRows));
-  const saveCsv = jest.spyOn(Command.prototype, 'saveCsv').mockImplementation();
-  const bulkLoad = jest
-    .spyOn(Command.prototype, 'bulkLoad')
-    .mockReturnValue(Promise.resolve({ job: {}, records: [] }));
-
-  afterEach(() => {
-    createReadStream.mockClear();
-    parseCsv.mockClear();
-    saveCsv.mockClear();
-    bulkLoad.mockClear();
+  beforeEach(async () => {
+    await $$.stubAuths(new MockTestOrgData());
+    stubMethod($$.SANDBOX, fs, 'createReadStream').returns(csv.write(csvRows));
+    stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
+      job: {},
+      records: [],
+    });
+    stubMethod($$.SANDBOX, Command.prototype, 'getFieldTypes').returns(
+      fieldTypes
+    );
+    stubMethod($$.SANDBOX, Command.prototype, 'parseCsv').resolves(csvRows);
+    stubMethod($$.SANDBOX, Command.prototype, 'saveCsv');
   });
 
-  const testSetup = test
-    .withOrg({ username: 'test@org.com' }, true)
-    .stdout()
-    .stderr();
+  const defaultArgs = [
+    '-u',
+    'test@foo.bar',
+    '-o',
+    'Contact',
+    '-f',
+    'data/Contact.csv',
+  ];
+  it(defaultArgs.join(' '), async () => {
+    const result = await (Command as any).run(defaultArgs);
+    expect(fs.createReadStream.calledWith('data/Contact.csv')).toBe(true);
 
-  const defaultArgs = ['-o', 'Contact', '-f', 'data/Contact.csv'];
-  testSetup
-    .command([commandName].concat(defaultArgs))
-    .it(defaultArgs.join(' '), (ctx) => {
-      expect(createReadStream).toHaveBeenCalledWith('data/Contact.csv');
-
-      expect(parseCsv).toHaveBeenCalledTimes(1);
-      expect(parseCsv.mock.calls[0][1]).toMatchObject({
-        encoding: 'utf8',
-        delimiter: ',',
-      });
-
-      expect(saveCsv).not.toHaveBeenCalled();
-
-      expect(bulkLoad).toHaveBeenCalledTimes(1);
-      expect(bulkLoad.mock.calls[0][1]).toBe('Contact');
-      expect(bulkLoad.mock.calls[0][2]).toBe('upsert');
-      expect(bulkLoad.mock.calls[0][3]).toEqual(csvRows);
-      expect(bulkLoad.mock.calls[0][4]).toEqual({
-        extIdField: 'Id',
-        concurrencyMode: 'Parallel',
-        assignmentRuleId: undefined,
-        batchSize: 10000,
-        wait: undefined,
-      });
+    expect(Command.prototype.parseCsv.calledOnce).toBe(true);
+    expect(Command.prototype.parseCsv.args[0][1]).toMatchObject({
+      encoding: 'utf8',
+      delimiter: ',',
     });
+
+    expect(Command.prototype.saveCsv.called).toBe(false);
+
+    expect(Command.prototype.bulkLoad.calledOnce).toBe(true);
+    expect(Command.prototype.bulkLoad.args[0][1]).toEqual('Contact');
+    expect(Command.prototype.bulkLoad.args[0][2]).toEqual('upsert');
+    expect(Command.prototype.bulkLoad.args[0][3]).toEqual(csvRows);
+    expect(Command.prototype.bulkLoad.args[0][4]).toEqual({
+      extIdField: 'Id',
+      concurrencyMode: 'Parallel',
+      assignmentRuleId: undefined,
+      batchSize: 10000,
+      wait: undefined,
+    });
+  });
 
   let args = defaultArgs.concat(
     '-i',
@@ -216,55 +214,58 @@ describe(commandName, () => {
     '-r',
     'path/to/resultfile.csv'
   );
-  const mapping = {};
-  const convert = () => [];
-  testSetup
-    .stub(fs, 'readJson', ((file) => {
-      expect(file).toBe('data/mappings.json');
-      return Promise.resolve(mapping);
-    }) as any)
-    .stub(utils, 'loadScript', ((file) => {
-      expect(file).toBe('data/convert.js');
-      return { convert };
-    }) as any)
-    .command([commandName].concat(args))
-    .it(args.join(' '), (ctx) => {
-      expect(parseCsv).toHaveBeenCalledTimes(1);
-      expect(parseCsv.mock.calls[0][1]).toEqual({
-        encoding: 'cp932',
-        delimiter: ':',
-        quote: '"',
-        skiplines: 0,
-        trim: false,
-        setnull: true,
-        mapping,
-        convert,
-        fieldTypes,
-      });
-
-      expect(saveCsv).toHaveBeenCalledTimes(1);
-      expect(saveCsv.mock.calls[0][0]).toBe('path/to/resultfile.csv');
-
-      expect(bulkLoad).toHaveBeenCalledTimes(1);
-      expect(bulkLoad.mock.calls[0][1]).toBe('Contact');
-      expect(bulkLoad.mock.calls[0][2]).toBe('upsert');
-      expect(bulkLoad.mock.calls[0][3]).toEqual(csvRows);
-      expect(bulkLoad.mock.calls[0][4]).toEqual({
-        extIdField: 'Email',
-        concurrencyMode: 'Serial',
-        assignmentRuleId: 'ruleId',
-        batchSize: 2,
-        wait: 10,
-      });
+  it(args.join(' '), async () => {
+    const mapping = {};
+    const convert = () => [];
+    stubMethod($$.SANDBOX, fs, 'readJson').resolves(mapping);
+    const loadScript = stubMethod($$.SANDBOX, utils, 'loadScript').returns({
+      convert,
     });
 
-  const start = jest.fn();
-  const finish = jest.fn();
-  jest.spyOn(utils, 'loadScript').mockReturnValue({ convert, start, finish });
-  testSetup
-    .command([commandName].concat(defaultArgs, '-c', 'data/converter.js'))
-    .it('called converters hooks', (ctx) => {
-      expect(start).toHaveBeenCalled();
-      expect(finish).toHaveBeenCalled();
+    const result = await (Command as any).run(args);
+
+    expect(fs.readJson.calledWith('data/mappings.json')).toBe(true);
+    expect(loadScript.calledWith('data/convert.js')).toBe(true);
+    expect(Command.prototype.parseCsv.calledOnce).toBe(true);
+    expect(Command.prototype.parseCsv.args[0][1]).toEqual({
+      encoding: 'cp932',
+      delimiter: ':',
+      quote: '"',
+      skiplines: 0,
+      trim: false,
+      setnull: true,
+      mapping,
+      convert,
+      fieldTypes,
     });
+    expect(Command.prototype.saveCsv.calledOnce).toBe(true);
+    expect(Command.prototype.saveCsv.args[0][0]).toBe('path/to/resultfile.csv');
+
+    expect(Command.prototype.bulkLoad.calledOnce).toBe(true);
+    expect(Command.prototype.bulkLoad.args[0][1]).toEqual('Contact');
+    expect(Command.prototype.bulkLoad.args[0][2]).toEqual('upsert');
+    expect(Command.prototype.bulkLoad.args[0][3]).toEqual(csvRows);
+    expect(Command.prototype.bulkLoad.args[0][4]).toEqual({
+      extIdField: 'Email',
+      concurrencyMode: 'Serial',
+      assignmentRuleId: 'ruleId',
+      batchSize: 2,
+      wait: 10,
+    });
+  });
+
+  it('called converters hooks', async () => {
+    const convert = jest.fn();
+    const start = jest.fn();
+    const finish = jest.fn();
+    const loadScript = stubMethod($$.SANDBOX, utils, 'loadScript').returns({
+      convert,
+      start,
+      finish,
+    });
+    await (Command as any).run(defaultArgs.concat('-c', 'data/converter.js'));
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(finish).toHaveBeenCalledTimes(1);
+  });
 });

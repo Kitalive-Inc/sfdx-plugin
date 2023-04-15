@@ -28,7 +28,7 @@ describe('chunkMetadata', () => {
 
 describe('readMetadata', () => {
   it('single object', async () => {
-    const read = jest.fn((type, fullNames, callback) =>
+    const read = jest.fn((type, fullNames) =>
       Promise.resolve(fullNames.map((fullName) => ({ fullName })))
     );
     const conn = new Connection({});
@@ -43,7 +43,7 @@ describe('readMetadata', () => {
   });
 
   it('11 objects', async () => {
-    const read = jest.fn((type, metadata, callback) =>
+    const read = jest.fn((type, metadata) =>
       Promise.resolve(metadata.map((fullName) => ({ fullName })))
     );
     const conn = new Connection({});
@@ -59,7 +59,7 @@ describe('readMetadata', () => {
 
 describe('updateMetadata', () => {
   it('single object', async () => {
-    const update = jest.fn((type, metadata, callback) =>
+    const update = jest.fn((type, metadata) =>
       Promise.resolve(
         metadata.map(({ fullName }) => ({ fullName, success: true }))
       )
@@ -76,7 +76,7 @@ describe('updateMetadata', () => {
   });
 
   it('12 objects', async () => {
-    const update = jest.fn((type, metadata, callback) =>
+    const update = jest.fn((type, metadata) =>
       Promise.resolve(
         metadata.map(({ fullName }) => ({ fullName, success: true }))
       )
@@ -96,7 +96,7 @@ describe('updateMetadata', () => {
 
 describe('upsertMetadata', () => {
   it('12 objects', async () => {
-    const upsert = jest.fn((type, metadata, callback) =>
+    const upsert = jest.fn((type, metadata) =>
       Promise.resolve(
         metadata.map(({ fullName }) => ({ fullName, success: true }))
       )
@@ -116,7 +116,7 @@ describe('upsertMetadata', () => {
 
 describe('deleteMetadata', () => {
   it('11 objects', async () => {
-    const del = jest.fn((type, metadata, callback) =>
+    const del = jest.fn((type, metadata) =>
       Promise.resolve(metadata.map((fullName) => ({ fullName, success: true })))
     );
     const conn = new Connection({});

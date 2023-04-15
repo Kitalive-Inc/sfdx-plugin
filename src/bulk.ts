@@ -3,23 +3,19 @@ import { JsonMap } from '@salesforce/ts-types';
 import * as dayjs from 'dayjs';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
+import { Connection } from 'jsforce';
 import {
   BatchInfo,
-  BatchResultInfo,
+  BulkIngestBatchResult,
   BulkOptions as JobOptions,
-  Connection,
+  IngestOperation,
   JobInfo,
-} from 'jsforce';
+} from 'jsforce/api/bulk';
 import * as path from 'path';
 import CsvConvertCommand from './commands/kit/data/csv/convert';
 import * as utils from './utils';
 
-type BulkOperation = 'insert' | 'update' | 'upsert' | 'delete' | 'hardDelete';
-
-type BulkOptions = {
-  extIdField?: string;
-  concurrencyMode?: 'Serial' | 'Parallel';
-  assignmentRuleId?: string;
+type BulkOptions = JobOptions & {
   batchSize?: number;
   wait?: number;
 };
@@ -27,7 +23,7 @@ type BulkOptions = {
 export type BulkResult = {
   job?: JobInfo;
   batches?: BatchInfo[];
-  records: BatchResultInfo[];
+  records: BulkIngestBatchResult;
   errors?: JsonMap[];
 };
 
@@ -45,14 +41,14 @@ export function bulkQuery(conn: Connection, query: string): Promise<JsonMap[]> {
 export function bulkLoad(
   conn: Connection,
   sobject: string,
-  operation: BulkOperation,
+  operation: IngestOperation,
   rows: JsonMap[],
   options?: BulkOptions
 ): Promise<BulkResult> {
   const { batchSize = 10000, wait, ...jobOptions } = options || {};
   const job = conn.bulk.createJob(sobject, operation, jobOptions as JobOptions);
 
-  const fetchResults = async (records: BatchResultInfo[]) => ({
+  const fetchResults = async (records: BulkIngestBatchResult) => ({
     job: await job.check(),
     batches: await job.list(),
     records,
@@ -84,7 +80,7 @@ export function bulkLoad(
 
       batch.on('response', resolve);
 
-      batch.execute(batchRows, (error) => error && reject(error));
+      batch.execute(batchRows);
     });
 
   // eslint-disable-next-line no-async-promise-executor
@@ -95,7 +91,7 @@ export function bulkLoad(
       const results = await Promise.all(
         utils.chunk(rows, batchSize).map(executeBatch)
       );
-      resolve(await fetchResults(results.flat() as BatchResultInfo[]));
+      resolve(await fetchResults(results.flat() as BulkIngestBatchResult));
     } catch (e) {
       reject(e);
     } finally {
@@ -118,7 +114,7 @@ const converters = {
 const csvFlags = CsvConvertCommand['flagsConfig'];
 
 export const createBulkCommand = (
-  operation: BulkOperation
+  operation: IngestOperation
 ): new (...args) => SfdxCommand => {
   const config = {
     object: flags.string({
@@ -367,7 +363,7 @@ export const createBulkCommand = (
     private bulkLoad(
       conn: Connection,
       sobject: string,
-      op: BulkOperation,
+      op: IngestOperation,
       rows: JsonMap[],
       options?: BulkOptions
     ) {

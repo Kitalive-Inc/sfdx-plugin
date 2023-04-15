@@ -1,9 +1,11 @@
-import { test } from '@salesforce/command/lib/test';
+import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
+import { stubMethod } from '@salesforce/ts-sinon';
 import Command from '../../../../../src/commands/kit/object/fields/describe';
 import * as metadata from '../../../../../src/metadata';
 
 const command = 'kit:object:fields:describe';
 describe(command, () => {
+  const $$ = testSetup();
   const fields = [
     { fullName: 'Text__c', type: 'Text' },
     {
@@ -29,21 +31,32 @@ describe(command, () => {
       },
     },
   ];
-  const getCustomFields = jest
-    .spyOn(metadata, 'getCustomFields')
-    .mockImplementation(async (conn, object) => fields);
-  const writeCsv = jest
-    .spyOn(Command.prototype, 'writeCsv')
-    .mockImplementation((file, rows) => {});
 
-  const t = test.withOrg({ username: 'test@org.com' }, true).stdout().stderr();
+  let getCustomFields: any;
+  let writeCsv: any;
+  beforeEach(async () => {
+    await $$.stubAuths(new MockTestOrgData());
+    getCustomFields = stubMethod(
+      $$.SANDBOX,
+      metadata,
+      'getCustomFields'
+    ).resolves(fields);
+    writeCsv = stubMethod($$.SANDBOX, Command.prototype, 'writeCsv');
+  });
 
-  t.command([command, '-o', 'CustomObject__c', '-f', 'file.csv']).it(
-    'arguments',
-    () => {
-      expect(getCustomFields).toHaveBeenCalledTimes(1);
-      expect(getCustomFields.mock.calls[0][1]).toEqual('CustomObject__c');
-      expect(writeCsv).toHaveBeenCalledWith('file.csv', [
+  it('with arguments', async () => {
+    await Command.run([
+      '-u',
+      'test@foo.bar',
+      '-o',
+      'CustomObject__c',
+      '-f',
+      'file.csv',
+    ]);
+    expect(getCustomFields.calledOnce).toBe(true);
+    expect(getCustomFields.args[0][1]).toEqual('CustomObject__c');
+    expect(
+      writeCsv.calledWith('file.csv', [
         fields[0],
         {
           fullName: 'Picklist__c',
@@ -57,7 +70,7 @@ describe(command, () => {
           restricted: true,
           valueSetName: 'setName',
         },
-      ]);
-    }
-  );
+      ])
+    ).toBe(true);
+  });
 });

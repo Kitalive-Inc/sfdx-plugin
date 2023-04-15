@@ -1,10 +1,12 @@
-import { test } from '@salesforce/command/lib/test';
+import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
+import { stubMethod } from '@salesforce/ts-sinon';
 import Command from '../../../../../src/commands/kit/layout/assignments/deploy';
 import { LayoutAssignmentsPerProfile } from '../../../../../src/types';
 import * as metadata from '../../../../../src/metadata';
-const updateMetadata = jest.spyOn(metadata, 'updateMetadata');
 
 describe('kit:layout:assignments:deploy', () => {
+  const $$ = testSetup();
+
   const config: LayoutAssignmentsPerProfile = {
     Admin: [
       { layout: 'Account-Account Layout For Admin' },
@@ -16,40 +18,36 @@ describe('kit:layout:assignments:deploy', () => {
     ],
   };
 
-  const readFile = jest
-    .spyOn(Command.prototype as any, 'readFile')
-    .mockReturnValue(config);
-
-  updateMetadata.mockImplementation(async (conn, type, profiles) =>
-    [profiles].flat().map(({ fullName }) => ({ fullName, success: true }))
-  );
-
-  afterEach(() => {
-    readFile.mockClear();
-    updateMetadata.mockClear();
-  });
-
-  const t = test.withOrg({ username: 'test@org.com' }, true).stdout().stderr();
-
-  t.command(['kit:layout:assignments:deploy']).it('no arguments', (ctx) => {
-    expect(readFile).toHaveBeenCalledWith('config/layout-assignments.json');
-    expect(updateMetadata).toHaveBeenCalledTimes(1);
-    expect(updateMetadata.mock.calls[0][2]).toEqual([
-      { fullName: 'Admin', layoutAssignments: config.Admin },
-      { fullName: 'Standard', layoutAssignments: config.Standard },
-    ]);
-    expect(ctx.stdout).toMatch(
-      'deploy layout assignments from config/layout-assignments.json'
+  let readFile: any;
+  let updateMetadata: any;
+  beforeEach(async () => {
+    await $$.stubAuths(new MockTestOrgData());
+    readFile = stubMethod($$.SANDBOX, Command.prototype, 'readFile').returns(
+      config
+    );
+    updateMetadata = stubMethod(
+      $$.SANDBOX,
+      metadata,
+      'updateMetadata'
+    ).callsFake(async (conn, type, profiles) =>
+      [profiles]
+        .flat()
+        .map(({ fullName }) => ({ fullName, success: true, errors: [] }))
     );
   });
 
-  t.command(['kit:layout:assignments:deploy', '-f', 'config/test.json']).it(
-    '-f config/test.json',
-    (ctx) => {
-      expect(readFile).toHaveBeenCalledWith('config/test.json');
-      expect(ctx.stdout).toMatch(
-        'deploy layout assignments from config/test.json'
-      );
-    }
-  );
+  it('no file argument', async () => {
+    await Command.run(['-u', 'test@foo.bar']);
+    expect(readFile.calledWith('config/layout-assignments.json')).toBe(true);
+    expect(updateMetadata.calledOnce).toBe(true);
+    expect(updateMetadata.args[0][2]).toEqual([
+      { fullName: 'Admin', layoutAssignments: config.Admin },
+      { fullName: 'Standard', layoutAssignments: config.Standard },
+    ]);
+  });
+
+  it('with file argument', async () => {
+    await Command.run(['-u', 'test@foo.bar', '-f', 'config/test.json']);
+    expect(readFile.calledWith('config/test.json')).toBe(true);
+  });
 });

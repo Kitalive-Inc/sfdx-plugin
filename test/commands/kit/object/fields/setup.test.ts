@@ -1,5 +1,4 @@
 import { setFieldOptions } from '../../../../../src/commands/kit/object/fields/setup';
-//import * as metadata from '../../../../../src/metadata';
 import { CustomField } from '../../../../../src/types';
 
 describe('setFieldOptions', () => {

@@ -1,4 +1,4 @@
-import { test } from '@salesforce/command/lib/test';
+import { testSetup } from '@salesforce/core/lib/testSetup';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/csv/convert';
@@ -6,6 +6,7 @@ import Command from '../../../../../src/commands/kit/data/csv/convert';
 jest.setTimeout(10000);
 const commandName = 'kit:data:csv:convert';
 describe(commandName, () => {
+  const $$ = testSetup();
   const csvRows = [
     { a: 'a1', b: 'b1', c: 'c1' },
     { a: 'a2', b: 'b2', c: 'c2' },
@@ -27,23 +28,21 @@ describe(commandName, () => {
     writeCsv.mockClear();
   });
 
-  const testSetup = test.stdout().stderr();
-
   const defaultArgs = ['-f', 'data/input.csv', '-o', 'data/output.csv'];
-  testSetup
-    .command([commandName].concat(defaultArgs))
-    .it(defaultArgs.join(' '), (ctx) => {
-      expect(createReadStream).toHaveBeenCalledWith('data/input.csv');
-      expect(createWriteStream).toHaveBeenCalledWith('data/output.csv');
-      expect(writeCsv).toHaveBeenCalledTimes(1);
-      expect(writeCsv.mock.calls[0][0]).toEqual(csvRows);
-    });
+  it(defaultArgs.join(' '), async () => {
+    await Command.run(defaultArgs);
+    expect(createReadStream).toHaveBeenCalledWith('data/input.csv');
+    expect(createWriteStream).toHaveBeenCalledWith('data/output.csv');
+    expect(writeCsv).toHaveBeenCalledTimes(1);
+    expect(writeCsv.mock.calls[0][0]).toEqual(csvRows);
+  });
 
-  let args = defaultArgs.concat('-m', 'data/mapping.json');
-  const readJson = jest
-    .spyOn(fs, 'readJson')
-    .mockImplementation(async (file) => ({ field: 'b' }));
-  testSetup.command([commandName].concat(args)).it(args.join(' '), (ctx) => {
+  const mappingArgs = defaultArgs.concat('-m', 'data/mapping.json');
+  it(mappingArgs.join(' '), async () => {
+    const readJson = jest
+      .spyOn(fs, 'readJson')
+      .mockImplementation(async (file) => ({ field: 'b' }));
+    await Command.run(mappingArgs);
     expect(readJson).toHaveBeenCalledTimes(1);
     expect(readJson.mock.calls[0][0]).toBe('data/mapping.json');
     expect(writeCsv.mock.calls[0][0]).toEqual([
@@ -52,11 +51,12 @@ describe(commandName, () => {
     ]);
   });
 
-  args = defaultArgs.concat('-c', 'data/convert.js');
-  const loadConverter = jest
-    .spyOn(Command.prototype, 'loadConverter' as any)
-    .mockImplementation((file) => (row) => ({ field: row.b.toUpperCase() }));
-  testSetup.command([commandName].concat(args)).it(args.join(' '), (ctx) => {
+  const convertArgs = defaultArgs.concat('-c', 'data/convert.js');
+  it(convertArgs.join(' '), async () => {
+    const loadConverter = jest
+      .spyOn(Command.prototype, 'loadConverter' as any)
+      .mockImplementation((file) => (row) => ({ field: row.b.toUpperCase() }));
+    await Command.run(convertArgs);
     expect(loadConverter).toHaveBeenCalledTimes(1);
     expect(loadConverter.mock.calls[0][0]).toBe('data/convert.js');
     expect(writeCsv.mock.calls[0][0]).toEqual([

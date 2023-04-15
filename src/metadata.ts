@@ -1,16 +1,13 @@
 import { JsonMap } from '@salesforce/ts-types';
+import { Connection } from 'jsforce';
 import {
-  Connection,
-  MetadataInfo,
+  Metadata,
+  MetadataType,
   SaveResult,
-  UpsertResult as JsforceUpsertResult,
-} from 'jsforce';
+  UpsertResult,
+} from 'jsforce/api/metadata';
 import { chunk } from './utils';
 import { CustomField } from './types';
-
-interface UpsertResult extends JsforceUpsertResult {
-  errors: { message: string };
-}
 
 let orgNamespace;
 export async function getOrgNamespace(conn: Connection): Promise<string> {
@@ -60,9 +57,9 @@ export function chunkMetadata<T>(type: string, metadata: T | T[]): Array<T[]> {
 
 export function readMetadata(
   conn: Connection,
-  type: string,
+  type: MetadataType,
   fullNames: string | string[]
-): Promise<MetadataInfo[]> {
+): Promise<Metadata[]> {
   return Promise.all(
     chunkMetadata(type, fullNames).map((data) => conn.metadata.read(type, data))
   ).then((a) => a.flat());
@@ -71,7 +68,7 @@ export function readMetadata(
 export function updateMetadata(
   conn: Connection,
   type: string,
-  metadata: MetadataInfo | MetadataInfo[]
+  metadata: Metadata | Metadata[]
 ): Promise<SaveResult[]> {
   return Promise.all(
     chunkMetadata(type, metadata).map((data) =>
@@ -83,7 +80,7 @@ export function updateMetadata(
 export function upsertMetadata(
   conn: Connection,
   type: string,
-  metadata: MetadataInfo | MetadataInfo[]
+  metadata: Metadata | Metadata[]
 ): Promise<UpsertResult[]> {
   return Promise.all(
     chunkMetadata(type, metadata).map((data) =>
