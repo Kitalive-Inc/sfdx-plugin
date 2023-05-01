@@ -1,12 +1,14 @@
-import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
-import { stubMethod, spyMethod } from '@salesforce/ts-sinon';
+import { expect } from 'chai';
+import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
+import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/bulk/insert';
 
-const commandName = 'kit:data:bulk:insert';
-describe(commandName, () => {
-  const $$ = testSetup();
+describe('kit data bulk insert', () => {
+  const $$ = new TestContext();
+  const testOrg = new MockTestOrgData();
 
   const csvRows = [
     { LastName: 'contact1', Email: 'contact1@example.com' },
@@ -14,10 +16,13 @@ describe(commandName, () => {
     { LastName: 'contact3', Email: 'contact3@example.com' },
   ];
 
+  let bulkLoad: any;
   beforeEach(async () => {
-    await $$.stubAuths(new MockTestOrgData());
+    await $$.stubAuths(testOrg);
+    stubSfCommandUx($$.SANDBOX);
+    stubSpinner($$.SANDBOX);
     stubMethod($$.SANDBOX, fs, 'createReadStream').returns(csv.write(csvRows));
-    stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
+    bulkLoad = stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
       job: {},
       records: [],
     });
@@ -27,22 +32,22 @@ describe(commandName, () => {
   });
 
   const defaultArgs = [
-    '-u',
-    'test@foo.bar',
     '-o',
+    'test@foo.bar',
+    '-s',
     'Contact',
     '-f',
     'data/Contact.csv',
   ];
   it(defaultArgs.join(' '), async () => {
-    const result = await (Command as any).run(defaultArgs);
-    expect(fs.createReadStream.calledWith('data/Contact.csv')).toBe(true);
+    await Command.run(defaultArgs);
+    expect(fs.createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
-    expect(Command.prototype.bulkLoad.calledOnce).toBe(true);
-    expect(Command.prototype.bulkLoad.args[0][1]).toEqual('Contact');
-    expect(Command.prototype.bulkLoad.args[0][2]).toEqual('insert');
-    expect(Command.prototype.bulkLoad.args[0][3]).toEqual(csvRows);
-    expect(Command.prototype.bulkLoad.args[0][4]).toEqual({
+    expect(bulkLoad.calledOnce).to.be.true;
+    expect(bulkLoad.args[0][1]).to.eq('Contact');
+    expect(bulkLoad.args[0][2]).to.eq('insert');
+    expect(bulkLoad.args[0][3]).to.eql(csvRows);
+    expect(bulkLoad.args[0][4]).to.eql({
       extIdField: undefined,
       concurrencyMode: 'Parallel',
       assignmentRuleId: undefined,

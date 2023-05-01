@@ -1,5 +1,7 @@
-import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
-import { stubMethod, spyMethod } from '@salesforce/ts-sinon';
+import { expect } from 'chai';
+import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
+import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
@@ -20,7 +22,7 @@ describe('.parseCsv', () => {
 
   it('with no options', async () => {
     const rows = await subject(csvStream());
-    expect(rows).toEqual(csvRows);
+    expect(rows).to.eql(csvRows);
   });
 
   it('with mapping', async () => {
@@ -31,7 +33,7 @@ describe('.parseCsv', () => {
         Field2__c: 'col3',
       },
     });
-    expect(rows).toEqual([
+    expect(rows).to.eql([
       { Field1__c: 'col1_1', Field2__c: 'col3_1' },
       { Field1__c: 'col1_2', Field2__c: 'col3_2' },
       { Field1__c: 'col1_3', Field2__c: 'col3_3' },
@@ -49,7 +51,7 @@ describe('.parseCsv', () => {
         };
       },
     });
-    expect(rows).toEqual([
+    expect(rows).to.eql([
       { Field1__c: 'col1_1 col2_1', Field2__c: 'col3_1' },
       { Field1__c: 'col1_3 col2_3', Field2__c: 'col3_3' },
     ]);
@@ -60,7 +62,7 @@ describe('.parseCsv', () => {
       Readable.from('empty,reference.key,value\n,,test'),
       { setnull: true }
     );
-    expect(rows).toEqual([
+    expect(rows).to.eql([
       { empty: '#N/A', 'reference.key': '', value: 'test' },
     ]);
   });
@@ -69,28 +71,28 @@ describe('.parseCsv', () => {
     const rows = await subject(Readable.from('a:b:c\nv1:v2:v3'), {
       delimiter: ':',
     });
-    expect(rows).toEqual([{ a: 'v1', b: 'v2', c: 'v3' }]);
+    expect(rows).to.eql([{ a: 'v1', b: 'v2', c: 'v3' }]);
   });
 
   it('with quote', async () => {
-    const rows = await subject(Readable.from(`a,b,c,d\n'1,2',3,"4,5"`), {
+    const rows = await subject(Readable.from('a,b,c,d\n\'1,2\',3,"4,5"'), {
       quote: "'",
     });
-    expect(rows).toEqual([{ a: '1,2', b: '3', c: '"4', d: '5"' }]);
+    expect(rows).to.eql([{ a: '1,2', b: '3', c: '"4', d: '5"' }]);
   });
 
   it('with skiplines', async () => {
-    const rows = await subject(Readable.from(`skip1,skip2\na,b\n1,2`), {
+    const rows = await subject(Readable.from('skip1,skip2\na,b\n1,2'), {
       skiplines: 1,
     });
-    expect(rows).toEqual([{ a: '1', b: '2' }]);
+    expect(rows).to.eql([{ a: '1', b: '2' }]);
   });
 
   it('with trim', async () => {
-    const rows = await subject(Readable.from(`a,b\n 1\t ,   2`), {
+    const rows = await subject(Readable.from('a,b\n 1\t ,   2'), {
       trim: true,
     });
-    expect(rows).toEqual([{ a: '1', b: '2' }]);
+    expect(rows).to.eql([{ a: '1', b: '2' }]);
   });
 
   it('with fieldTypes', async () => {
@@ -114,7 +116,7 @@ describe('.parseCsv', () => {
     const t1 = new Date('2020/3/3 4:55');
     const t2 = new Date('2020-03-03T12:34:56');
 
-    expect(rows).toEqual([
+    expect(rows).to.eql([
       { a: '2020/1/1', d: '2020-02-02', t: t1.toISOString() },
       { a: '', d: '2020-02-03', t: t2.toISOString() },
       { a: '', d: '2020-03-01', t: '2020-03-03T16:34:56.000Z' },
@@ -122,9 +124,9 @@ describe('.parseCsv', () => {
   });
 });
 
-const commandName = 'kit:data:bulk:upsert';
-describe(commandName, () => {
-  const $$ = testSetup();
+describe('kit data bulk upsert', () => {
+  const $$ = new TestContext();
+  const testOrg = new MockTestOrgData();
   const csvRows = [
     {
       'Account.ExternalId__c': 'code1',
@@ -144,45 +146,52 @@ describe(commandName, () => {
   ];
 
   const fieldTypes = {};
+  let bulkLoad: any;
+  let parseCsv: any;
+  let saveCsv: any;
   beforeEach(async () => {
-    await $$.stubAuths(new MockTestOrgData());
+    await $$.stubAuths(testOrg);
+    stubSfCommandUx($$.SANDBOX);
+    stubSpinner($$.SANDBOX);
     stubMethod($$.SANDBOX, fs, 'createReadStream').returns(csv.write(csvRows));
-    stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
+    bulkLoad = stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
       job: {},
       records: [],
     });
     stubMethod($$.SANDBOX, Command.prototype, 'getFieldTypes').returns(
       fieldTypes
     );
-    stubMethod($$.SANDBOX, Command.prototype, 'parseCsv').resolves(csvRows);
-    stubMethod($$.SANDBOX, Command.prototype, 'saveCsv');
+    parseCsv = stubMethod($$.SANDBOX, Command.prototype, 'parseCsv').resolves(
+      csvRows
+    );
+    saveCsv = stubMethod($$.SANDBOX, Command.prototype, 'saveCsv');
   });
 
   const defaultArgs = [
-    '-u',
-    'test@foo.bar',
     '-o',
+    'test@foo.bar',
+    '-s',
     'Contact',
     '-f',
     'data/Contact.csv',
   ];
   it(defaultArgs.join(' '), async () => {
-    const result = await (Command as any).run(defaultArgs);
-    expect(fs.createReadStream.calledWith('data/Contact.csv')).toBe(true);
+    await Command.run(defaultArgs);
+    expect(fs.createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
-    expect(Command.prototype.parseCsv.calledOnce).toBe(true);
-    expect(Command.prototype.parseCsv.args[0][1]).toMatchObject({
+    expect(parseCsv.calledOnce).to.be.true;
+    expect(parseCsv.args[0][1]).to.contain({
       encoding: 'utf8',
       delimiter: ',',
     });
 
-    expect(Command.prototype.saveCsv.called).toBe(false);
+    expect(saveCsv.called).to.be.false;
 
-    expect(Command.prototype.bulkLoad.calledOnce).toBe(true);
-    expect(Command.prototype.bulkLoad.args[0][1]).toEqual('Contact');
-    expect(Command.prototype.bulkLoad.args[0][2]).toEqual('upsert');
-    expect(Command.prototype.bulkLoad.args[0][3]).toEqual(csvRows);
-    expect(Command.prototype.bulkLoad.args[0][4]).toEqual({
+    expect(bulkLoad.calledOnce).to.be.true;
+    expect(bulkLoad.args[0][1]).to.eq('Contact');
+    expect(bulkLoad.args[0][2]).to.eq('upsert');
+    expect(bulkLoad.args[0][3]).to.eql(csvRows);
+    expect(bulkLoad.args[0][4]).to.eql({
       extIdField: 'Id',
       concurrencyMode: 'Parallel',
       assignmentRuleId: undefined,
@@ -191,7 +200,7 @@ describe(commandName, () => {
     });
   });
 
-  let args = defaultArgs.concat(
+  const args = defaultArgs.concat(
     '-i',
     'Email',
     '--concurrencymode',
@@ -222,12 +231,12 @@ describe(commandName, () => {
       convert,
     });
 
-    const result = await (Command as any).run(args);
+    await Command.run(args);
 
-    expect(fs.readJson.calledWith('data/mappings.json')).toBe(true);
-    expect(loadScript.calledWith('data/convert.js')).toBe(true);
-    expect(Command.prototype.parseCsv.calledOnce).toBe(true);
-    expect(Command.prototype.parseCsv.args[0][1]).toEqual({
+    expect(fs.readJson.calledWith('data/mappings.json')).to.be.true;
+    expect(loadScript.calledWith('data/convert.js')).to.be.true;
+    expect(parseCsv.calledOnce).to.be.true;
+    expect(parseCsv.args[0][1]).to.eql({
       encoding: 'cp932',
       delimiter: ':',
       quote: '"',
@@ -238,14 +247,14 @@ describe(commandName, () => {
       convert,
       fieldTypes,
     });
-    expect(Command.prototype.saveCsv.calledOnce).toBe(true);
-    expect(Command.prototype.saveCsv.args[0][0]).toBe('path/to/resultfile.csv');
+    expect(saveCsv.calledOnce).to.be.true;
+    expect(saveCsv.args[0][0]).to.eq('path/to/resultfile.csv');
 
-    expect(Command.prototype.bulkLoad.calledOnce).toBe(true);
-    expect(Command.prototype.bulkLoad.args[0][1]).toEqual('Contact');
-    expect(Command.prototype.bulkLoad.args[0][2]).toEqual('upsert');
-    expect(Command.prototype.bulkLoad.args[0][3]).toEqual(csvRows);
-    expect(Command.prototype.bulkLoad.args[0][4]).toEqual({
+    expect(bulkLoad.calledOnce).to.be.true;
+    expect(bulkLoad.args[0][1]).to.eq('Contact');
+    expect(bulkLoad.args[0][2]).to.eq('upsert');
+    expect(bulkLoad.args[0][3]).to.eql(csvRows);
+    expect(bulkLoad.args[0][4]).to.eql({
       extIdField: 'Email',
       concurrencyMode: 'Serial',
       assignmentRuleId: 'ruleId',
@@ -255,17 +264,17 @@ describe(commandName, () => {
   });
 
   it('called converters hooks', async () => {
-    const convert = jest.fn();
-    const start = jest.fn();
-    const finish = jest.fn();
-    const loadScript = stubMethod($$.SANDBOX, utils, 'loadScript').returns({
+    const convert = $$.SANDBOX.stub();
+    const start = $$.SANDBOX.stub();
+    const finish = $$.SANDBOX.stub();
+    stubMethod($$.SANDBOX, utils, 'loadScript').returns({
       convert,
       start,
       finish,
     });
-    await (Command as any).run(defaultArgs.concat('-c', 'data/converter.js'));
+    await Command.run(defaultArgs.concat('-c', 'data/converter.js'));
 
-    expect(start).toHaveBeenCalledTimes(1);
-    expect(finish).toHaveBeenCalledTimes(1);
+    expect(start.calledOnce).to.be.true;
+    expect(finish.calledOnce).to.be.true;
   });
 });

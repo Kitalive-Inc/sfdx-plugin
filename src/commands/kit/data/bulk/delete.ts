@@ -1,99 +1,110 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import { composeQuery, getField, parseQuery } from 'soql-parser-js';
 import { bulkLoad, bulkQuery, BulkResult } from '../../../../bulk';
 
-export default class DeleteCommand extends SfdxCommand {
-  public static description = 'bulk delete records by SOQL select query';
+Messages.importMessagesDirectory(__dirname);
+const bulkMessages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'data.bulk'
+);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'data.bulk.delete'
+);
 
-  public static examples = [
-    "$ sfdx kit:data:bulk:delete -q 'SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:5'",
-  ];
+export default class DeleteCommand extends SfCommand<BulkResult> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = false;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    query: flags.string({
+  public static readonly flags = {
+    query: Flags.string({
       char: 'q',
       required: true,
-      description: 'SOQL query to delete',
+      summary: messages.getMessage('flags.query.summary'),
     }),
-    hard: flags.boolean({
+    hard: Flags.boolean({
       default: false,
-      description: 'perform a hard delete',
+      summary: messages.getMessage('flags.hard.summary'),
     }),
-    concurrencymode: flags.string({
+    concurrencymode: Flags.string({
       default: 'Parallel',
-      description: 'the concurrency mode (Parallel or Serial) for the job',
+      summary: bulkMessages.getMessage('flags.concurrencymode.summary'),
     }),
-    batchsize: flags.integer({
+    batchsize: Flags.integer({
       char: 's',
       min: 1,
       max: 10000,
       default: 10000,
-      description: 'the batch size of the job',
+      summary: bulkMessages.getMessage('flags.batchsize.summary'),
     }),
-    wait: flags.integer({
+    wait: Flags.integer({
       char: 'w',
       min: 0,
-      description:
-        'the number of minutes to wait for the command to complete before displaying the results',
+      summary: bulkMessages.getMessage('flags.wait.summary'),
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<BulkResult> {
-    const query = parseQuery(this.flags.query);
+    const { flags } = await this.parse();
+    const conn = flags['target-org'].getConnection();
+    const query = parseQuery(flags.query);
     query.fields = [getField('Id')];
     const soql = composeQuery(query);
-    const conn = this.org.getConnection();
-    const {
-      concurrencymode: concurrencyMode,
-      batchsize: batchSize,
-      wait,
-      hard,
-    } = this.flags;
 
-    this.ux.startSpinner(hard ? 'Bulk hard delete' : 'Bulk delete');
+    this.spinner.start(flags.hard ? 'Bulk hard delete' : 'Bulk delete');
 
     try {
       const rows = await this.bulkQuery(conn, soql);
       if (!rows.length) {
-        this.ux.stopSpinner('no records');
+        this.spinner.stop('no records');
         return { records: [] };
       }
 
-      const operation = hard ? 'hardDelete' : 'delete';
+      const operation = flags.hard ? 'hardDelete' : 'delete';
       const result = await this.bulkLoad(conn, query.sObject, operation, rows, {
-        concurrencyMode,
-        batchSize,
-        wait,
+        concurrencyMode: flags.concurrencymode,
+        batchSize: flags.batchsize,
+        wait: flags.wait,
       });
 
-      if (wait) {
+      if (flags.wait) {
         const { numberRecordsProcessed, numberRecordsFailed } =
           result.job as unknown as JsonMap;
         const errors = result.records
           .filter((r) => !r.success)
           .map((r) => ({ id: r.id, errors: r.errors.join(', ') }));
-        this.ux.stopSpinner(
+        this.spinner.stop(
           `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
         );
         if (errors.length) {
-          this.ux.styledHeader('Error details');
-          this.ux.table(errors, ['id', 'errors']);
+          this.styledHeader('Error details');
+          this.table(errors, {
+            id: { header: 'ID' },
+            errors: { header: 'ERRORS' },
+          });
         }
       } else {
-        this.ux.stopSpinner();
-        this.ux.log('Check bulk job status with the command: ');
-        this.ux.log(
-          `sfdx force:org:open -u ${this.flags.targetusername} -p "lightning/setup/AsyncApiJobStatus/page?address=%2F${result.job?.id}"`
+        this.spinner.stop();
+        this.log(
+          bulkMessages.getMessage('asyncJob', [
+            this.config.bin,
+            flags['target-org'].options.aliasOrUsername,
+            result.job?.id,
+          ])
         );
       }
 
       return result;
     } catch (e) {
-      this.ux.stopSpinner('error');
+      this.spinner.stop('error');
       throw e;
     }
   }

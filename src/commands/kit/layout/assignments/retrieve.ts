@@ -1,8 +1,12 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import { SfdxError } from '@salesforce/core';
+import * as path from 'path';
+import { Connection, Messages, SfError } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import * as glob from 'fast-glob';
 import * as fs from 'fs-extra';
-import * as path from 'path';
 import {
   LayoutAssignment,
   LayoutAssignmentsPerProfile,
@@ -25,66 +29,64 @@ function assignmentsPerObject(
   return result;
 }
 
-export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
-  public static description =
-    'retrieve page layout assignments and save to JSON file';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'layout.assignments.retrieve'
+);
 
-  public static examples = [
-    '$ sfdx kit:layout:assignments:retrieve',
-    '$ sfdx kit:layout:assignments:retrieve -p Admin,Standard,StandardAul -o Account,CustomObject__c -f config/layout-assignments.scratch.json',
-    '$ sfdx kit:layout:assignments:retrieve -u me@my.org -f config/layout-assignments.sandbox.json',
-  ];
+export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmentsPerProfile> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = true;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    file: flags.string({
+  public static readonly requiresProject = true;
+
+  public static readonly flags = {
+    file: Flags.string({
       char: 'f',
       required: true,
-      description: 'output file path',
+      summary: messages.getMessage('flags.file.summary'),
       default: 'config/layout-assignments.json',
     }),
-    profile: flags.string({
+    profile: Flags.string({
       char: 'p',
       required: false,
-      description:
-        'comma separated profile names to retrieve (default: all profiles)',
+      multiple: true,
+      summary: messages.getMessage('flags.profile.summary'),
     }),
-    object: flags.string({
-      char: 'o',
+    sobject: Flags.string({
+      char: 's',
       required: false,
-      description:
-        'comma separated object names to retrieve (default: objects which have multiple layouts)',
+      multiple: true,
+      summary: messages.getMessage('flags.sobject.summary'),
     }),
-    merge: flags.boolean({
+    merge: Flags.boolean({
       required: false,
-      description: 'merge retrieved configurations with existing file',
+      summary: messages.getMessage('flags.merge.summary'),
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<LayoutAssignmentsPerProfile> {
-    const filterObjects = this.flags.object
-      ? this.flags.object.split(',')
+    const { flags } = await this.parse(LayoutAssignmentsRetrieve);
+    const conn = flags['target-org'].getConnection();
+    const filterObjects = flags.sobject
+      ? flags.sobject
       : await this.objectNamesFromLayouts();
     if (filterObjects.length === 0)
-      throw new SfdxError('There are no objects to retrieve');
+      throw new SfError(messages.getMessage('error.noSObjects'));
 
-    const data: LayoutAssignmentsPerProfile = this.flags.merge
-      ? await this.readFile(this.flags.file)
+    const data: LayoutAssignmentsPerProfile = flags.merge
+      ? await this.readFile(flags.file)
       : {};
 
-    const profileNames = this.flags.profile
-      ? this.flags.profile.split(',')
-      : await this.getProfileNames();
+    const profileNames = flags.profile
+      ? flags.profile
+      : await this.getProfileNames(conn);
 
-    this.ux.log(
-      `retrieve layout assignments\n\tprofiles: ${profileNames.join(
-        ', '
-      )}\n\tobjects: ${filterObjects.join(', ')}`
-    );
+    this.spinner.start(messages.getMessage('spinner.start'));
 
-    const conn = this.org.getConnection();
     const profiles = (await readMetadata(
       conn,
       'Profile',
@@ -94,7 +96,7 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
       if (!profile.fullName || !profile.layoutAssignments) continue;
       let assignmentsMap = assignmentsPerObject(
         profile.layoutAssignments,
-        await completeDefaultNamespace(conn, filterObjects as string[])
+        await completeDefaultNamespace(conn, filterObjects)
       );
       if (data[profile.fullName]) {
         const oldAssignmentsMap = assignmentsPerObject(data[profile.fullName]);
@@ -104,9 +106,16 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
         .flat()
         .sort((a, b) => a.layout.localeCompare(b.layout));
     }
+    this.spinner.stop();
 
-    this.ux.log('save to ' + this.flags.file);
-    await this.writeFile(this.flags.file, data);
+    this.log(
+      messages.getMessage('result', [
+        flags.file,
+        profileNames.join(', '),
+        filterObjects.join(', '),
+      ])
+    );
+    await this.writeFile(flags.file, data);
 
     return data;
   }
@@ -138,10 +147,9 @@ export default class LayoutAssignmentsRetrieveCommand extends SfdxCommand {
     return this.project.resolveProjectConfig();
   }
 
-  private getProfileNames(): Promise<string[]> {
-    return this.org
-      .getConnection()
-      .metadata.list({ type: 'Profile' })
+  private getProfileNames(conn: Connection): Promise<string[]> {
+    return conn.metadata
+      .list({ type: 'Profile' })
       .then((profiles) => profiles.map((p) => p.fullName));
   }
 

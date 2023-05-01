@@ -1,11 +1,11 @@
+import * as path from 'path';
+import { pipeline } from 'stream';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import { decodeStream } from 'iconv-lite';
-import * as path from 'path';
-import { pipeline } from 'stream';
 
-export function chunk<T>(array: Array<T>, size: number): Array<Array<T>> {
-  const result: Array<Array<T>> = [];
+export function chunk<T>(array: T[], size: number): T[][] {
+  const result: T[][] = [];
   for (let i = 0, l = array.length; i < l; i += size) {
     result.push(array.slice(i, i + size));
   }
@@ -18,7 +18,7 @@ export function* rangeGenerator(from: number, to: number): Iterable<number> {
   }
 }
 
-export function range(from: number, to: number): Array<number> {
+export function range(from: number, to: number): number[] {
   return Array.from(rangeGenerator(from, to));
 }
 

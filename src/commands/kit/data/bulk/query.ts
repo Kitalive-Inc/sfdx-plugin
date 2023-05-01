@@ -1,54 +1,62 @@
-import { write } from '@fast-csv/format';
-import { flags, SfdxCommand } from '@salesforce/command';
-import { JsonMap } from '@salesforce/ts-types';
 import * as fs from 'fs';
+import { Messages } from '@salesforce/core';
+import { write } from '@fast-csv/format';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
+import { JsonMap } from '@salesforce/ts-types';
 import { bulkQuery } from '../../../../bulk';
 
-export default class QueryCommand extends SfdxCommand {
-  public static description = 'bulk query records';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'data.bulk.query'
+);
 
-  public static examples = [
-    "$ sfdx kit:data:bulk:query -q 'SELECT Id, Name FROM Account' -f ./path/to/Account.csv",
-  ];
+export default class QueryCommand extends SfCommand<JsonMap[]> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = false;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    query: flags.string({
+  public static readonly flags = {
+    query: Flags.string({
       char: 'q',
       required: true,
-      description: 'SOQL query to export',
+      summary: messages.getMessage('flags.query.summary'),
     }),
-    csvfile: flags.string({
+    csvfile: Flags.string({
       char: 'f',
-      description: 'output csv file (default: standard output)',
+      summary: messages.getMessage('flags.csvfile.summary'),
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<JsonMap[]> {
-    const conn = this.org.getConnection();
-    const file = this.flags.csvfile;
+    const { flags } = await this.parse();
+    const conn = flags['target-org'].getConnection();
+    const file = flags.csvfile;
 
-    this.ux.startSpinner('Bulk query');
+    this.spinner.start('Bulk query');
     try {
-      const rows = await this.bulkQuery(conn, this.flags.query);
+      const rows = await this.bulkQuery(conn, flags.query);
       if (!rows.length) {
-        this.ux.stopSpinner('no records');
+        this.spinner.stop('no records');
         return rows;
       }
 
-      this.ux.stopSpinner(`${rows.length} records`);
+      this.spinner.stop(`${rows.length} records`);
 
       if (file) {
         this.writeCsv(rows, fs.createWriteStream(file));
-      } else if (!this.flags.json) {
+      } else if (!this.jsonEnabled()) {
         this.writeCsv(rows, process.stdout);
       }
 
       return rows;
     } catch (e) {
-      this.ux.stopSpinner('error');
+      this.spinner.stop('error');
       throw e;
     }
   }

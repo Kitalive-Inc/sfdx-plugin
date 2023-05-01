@@ -1,4 +1,10 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import * as path from 'path';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as dayjs from 'dayjs';
 import * as csv from 'fast-csv';
@@ -11,9 +17,11 @@ import {
   IngestOperation,
   JobInfo,
 } from 'jsforce/api/bulk';
-import * as path from 'path';
 import CsvConvertCommand from './commands/kit/data/csv/convert';
 import * as utils from './utils';
+
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages('@kitalive/sfdx-plugin', 'data.bulk');
 
 type BulkOptions = JobOptions & {
   batchSize?: number;
@@ -111,100 +119,74 @@ const converters = {
   datetime: normalizeDateString,
 };
 
-const csvFlags = CsvConvertCommand['flagsConfig'];
+const csvFlags = CsvConvertCommand.flags;
 
-export const createBulkCommand = (
-  operation: IngestOperation
-): new (...args) => SfdxCommand => {
-  const config = {
-    object: flags.string({
-      char: 'o',
-      required: true,
-      description: `the sObject name to ${operation}`,
-    }),
-    // csv settings
-    csvfile: flags.filepath({
-      char: 'f',
-      required: true,
-      description: `the CSV file path that defines the records to ${operation}`,
-    }),
-    resultfile: flags.filepath({
-      char: 'r',
-      description: `the CSV file path for writing the ${operation} results`,
-    }),
-    encoding: csvFlags.encoding,
-    delimiter: csvFlags.delimiter,
-    quote: csvFlags.quote,
-    skiplines: csvFlags.skiplines,
-    trim: csvFlags.trim,
-    mapping: csvFlags.mapping,
-    converter: csvFlags.converter,
-    setnull: flags.boolean({
-      description: `set blank values as null values during ${operation} operations (default: empty field values are ignored)`,
-    }),
-    convertonly: flags.boolean({
-      description: `output converted.csv file and skip ${operation} for debugging`,
-    }),
-    // job settings
-    concurrencymode: flags.string({
-      default: 'Parallel',
-      description: 'the concurrency mode (Parallel or Serial) for the job',
-    }),
-    assignmentruleid: flags.string({
-      description:
-        'the ID of a specific assignment rule to run for a case or a lead.',
-    }),
-    batchsize: flags.integer({
-      char: 's',
-      min: 1,
-      max: 10000,
-      default: 10000,
-      description: 'the batch size of the job',
-    }),
-    wait: flags.integer({
-      char: 'w',
-      min: 0,
-      description:
-        'the number of minutes to wait for the command to complete before displaying the results',
-    }),
-  };
+export const createBulkCommand = (operation: IngestOperation) =>
+  class extends SfCommand<BulkResult> {
+    public static description = messages.getMessage('description');
 
-  const examples = [
-    `$ sfdx kit:data:bulk:${operation} -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json`,
-  ];
+    public static examples = messages.getMessages('examples', [
+      operation.charAt(0).toUpperCase() + operation.slice(1),
+    ]);
 
-  if (operation === 'upsert') {
-    config['externalid'] = flags.string({
-      char: 'i',
-      required: true,
-      default: 'Id',
-      description: 'the column name of the external ID',
-    });
-    examples.push(
-      '$ sfdx kit:data:bulk:upsert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -i MyExternalId__c -w 10'
-    );
-  } else {
-    examples.push(
-      `$ sfdx kit:data:bulk:${operation} -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10`
-    );
-  }
+    public static requiresProject = false;
 
-  return class extends SfdxCommand {
-    public static description = [
-      `bulk ${operation} records from a CSV file`,
-      'For information about CSV file formats, see [Prepare CSV Files](https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/datafiles_csv_preparing.htm) in the Bulk API Developer Guide.',
-    ].join('\n');
-
-    public static examples = examples;
-
-    protected static requiresUsername = true;
-    protected static requiresProject = false;
-
-    protected static flagsConfig = config;
+    public static flags = {
+      sobject: Flags.string({
+        char: 's',
+        required: true,
+        summary: messages.getMessage('flags.sobject.summary', [operation]),
+      }),
+      // csv settings
+      csvfile: Flags.string({
+        char: 'f',
+        required: true,
+        summary: messages.getMessage('flags.csvfile.summary', [operation]),
+      }),
+      resultfile: Flags.string({
+        char: 'r',
+        summary: messages.getMessage('flags.resultfile.summary', [operation]),
+      }),
+      encoding: csvFlags.encoding,
+      delimiter: csvFlags.delimiter,
+      quote: csvFlags.quote,
+      skiplines: csvFlags.skiplines,
+      trim: csvFlags.trim,
+      mapping: csvFlags.mapping,
+      converter: csvFlags.converter,
+      setnull: Flags.boolean({
+        summary: messages.getMessage('flags.setnull.summary', [operation]),
+      }),
+      convertonly: Flags.boolean({
+        summary: messages.getMessage('flags.convertonly.summary', [operation]),
+      }),
+      // job settings
+      concurrencymode: Flags.string({
+        default: 'Parallel',
+        summary: messages.getMessage('flags.concurrencymode.summary'),
+      }),
+      assignmentruleid: Flags.string({
+        summary: messages.getMessage('flags.assignmentruleid.summary'),
+      }),
+      batchsize: Flags.integer({
+        min: 1,
+        max: 10000,
+        default: 10000,
+        summary: messages.getMessage('flags.batchsize.summary'),
+      }),
+      wait: Flags.integer({
+        char: 'w',
+        min: 0,
+        summary: messages.getMessage('flags.wait.summary'),
+      }),
+      'target-org': requiredOrgFlagWithDeprecations,
+    };
 
     public async run(): Promise<BulkResult> {
+      const { flags } = await this.parse();
+      const conn = flags['target-org'].getConnection();
       const {
-        object,
+        sobject,
         csvfile,
         mapping,
         converter,
@@ -214,13 +196,13 @@ export const createBulkCommand = (
         skiplines,
         trim,
         setnull,
-      } = this.flags;
+      } = flags;
 
       const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
       const script = converter ? utils.loadScript(converter) : {};
-      const fieldTypes = await this.getFieldTypes(object);
+      const fieldTypes = await this.getFieldTypes(conn, sobject);
 
-      this.ux.startSpinner('Processing csv');
+      this.spinner.start('Processing csv');
 
       if (script.start) await script.start(this);
 
@@ -241,9 +223,9 @@ export const createBulkCommand = (
         if (result) rows = result;
       }
 
-      this.ux.stopSpinner();
+      this.spinner.stop();
 
-      if (this.flags.convertonly) {
+      if (flags.convertonly) {
         const base = path.basename(csvfile, path.extname(csvfile));
         this.saveCsv(
           path.join(path.dirname(csvfile), base + '.converted.csv'),
@@ -252,27 +234,21 @@ export const createBulkCommand = (
         return;
       }
 
-      this.ux.startSpinner(`Bulk ${operation}`);
+      this.spinner.start(`Bulk ${operation}`);
       try {
-        const result = await this.bulkLoad(
-          this.org.getConnection(),
-          object,
-          operation,
-          rows,
-          {
-            extIdField: this.flags.externalid,
-            concurrencyMode: this.flags.concurrencymode,
-            assignmentRuleId: this.flags.assignmentruleid,
-            batchSize: this.flags.batchsize,
-            wait: this.flags.wait,
-          }
-        );
+        const result = await this.bulkLoad(conn, sobject, operation, rows, {
+          extIdField: flags.externalid,
+          concurrencyMode: flags.concurrencymode,
+          assignmentRuleId: flags.assignmentruleid,
+          batchSize: flags.batchsize,
+          wait: flags.wait,
+        });
 
         const batchErrors = [];
-        if (this.flags.wait) {
+        if (flags.wait) {
           const { numberRecordsProcessed, numberRecordsFailed } =
             result.job as unknown as JsonMap;
-          this.ux.stopSpinner(
+          this.spinner.stop(
             `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
           );
 
@@ -287,22 +263,28 @@ export const createBulkCommand = (
 
           if (batchErrors.length) {
             result.errors = batchErrors;
-            this.ux.styledHeader('Error details');
-            this.ux.table(batchErrors, ['line', 'message']);
+            this.styledHeader('Error details');
+            this.table(batchErrors, {
+              line: { header: 'LINE' },
+              message: { header: 'MESSAGE' },
+            });
           }
         } else {
-          this.ux.stopSpinner();
-          this.ux.log('Check bulk job status with the command: ');
-          this.ux.log(
-            `sfdx force:org:open -u ${this.flags.targetusername} -p "lightning/setup/AsyncApiJobStatus/page?address=%2F${result.job.id}"`
+          this.spinner.stop();
+          this.log(
+            messages.getMessage('asyncJob', [
+              this.config.bin,
+              flags['target-org'].options.aliasOrUsername,
+              result.job?.id,
+            ])
           );
         }
 
-        if (this.flags.resultfile) this.saveCsv(this.flags.resultfile, rows);
+        if (flags.resultfile) this.saveCsv(flags.resultfile, rows);
 
         return result;
       } catch (e) {
-        this.ux.stopSpinner('error');
+        this.spinner.stop('error');
         throw e;
       }
     }
@@ -332,7 +314,7 @@ export const createBulkCommand = (
         setnull,
         fieldTypes,
       } = options ?? {};
-      return await utils.parseCsv(input, {
+      return utils.parseCsv(input, {
         encoding,
         delimiter,
         quote,
@@ -374,8 +356,7 @@ export const createBulkCommand = (
       csv.writeToPath(file, rows, { headers: true, writeBOM: true });
     }
 
-    private async getFieldTypes(sobject) {
-      const conn = this.org.getConnection();
+    private async getFieldTypes(conn, sobject) {
       const objectInfo = await conn.describe(sobject);
       return objectInfo.fields.reduce(
         (info, { name, type }) => Object.assign(info, { [name]: type }),
@@ -383,4 +364,3 @@ export const createBulkCommand = (
       );
     }
   };
-};

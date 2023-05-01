@@ -1,11 +1,12 @@
-import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
+import { expect } from 'chai';
+import { TestContext } from '@salesforce/core/lib/testSetup';
+import { stubSpinner } from '@salesforce/sf-plugins-core';
 import { stubMethod } from '@salesforce/ts-sinon';
 import Command from '../../../../../src/commands/kit/object/fields/describe';
 import * as metadata from '../../../../../src/metadata';
 
-const command = 'kit:object:fields:describe';
-describe(command, () => {
-  const $$ = testSetup();
+describe('kit object fields describe', () => {
+  const $$ = new TestContext();
   const fields = [
     { fullName: 'Text__c', type: 'Text' },
     {
@@ -34,8 +35,9 @@ describe(command, () => {
 
   let getCustomFields: any;
   let writeCsv: any;
+  let spinner: any;
   beforeEach(async () => {
-    await $$.stubAuths(new MockTestOrgData());
+    spinner = stubSpinner($$.SANDBOX);
     getCustomFields = stubMethod(
       $$.SANDBOX,
       metadata,
@@ -46,15 +48,15 @@ describe(command, () => {
 
   it('with arguments', async () => {
     await Command.run([
-      '-u',
-      'test@foo.bar',
       '-o',
+      'test@foo.bar',
+      '-s',
       'CustomObject__c',
       '-f',
       'file.csv',
     ]);
-    expect(getCustomFields.calledOnce).toBe(true);
-    expect(getCustomFields.args[0][1]).toEqual('CustomObject__c');
+    expect(getCustomFields.calledOnce).to.be.true;
+    expect(getCustomFields.args[0][1]).to.eq('CustomObject__c');
     expect(
       writeCsv.calledWith('file.csv', [
         fields[0],
@@ -71,6 +73,7 @@ describe(command, () => {
           valueSetName: 'setName',
         },
       ])
-    ).toBe(true);
+    ).to.be.true;
+    expect(spinner.start.args[0][0]).to.eq('Describe CustomObject__c fields');
   });
 });

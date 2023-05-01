@@ -1,90 +1,89 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import { Messages } from '@salesforce/core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import { loadScript, parseCsv } from '../../../../utils';
 
-export default class CsvConvertCommand extends SfdxCommand {
-  public static description =
-    'convert CSV data using column mapping file or Node.js script';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'data.csv.convert'
+);
 
-  public static examples = [
-    '$ sfdx kit:data:csv:convert -f ./path/to/input.csv -m ./path/to/mapping.json',
-    '$ sfdx kit:data:csv:convert -f ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js -e cp932 -d :',
-  ];
+export default class CsvConvert extends SfCommand<JsonMap[]> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = false;
-  protected static requiresProject = false;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    inputfile: flags.filepath({
-      char: 'f',
-      description: 'the path of the input CSV file (default: standard input)',
+  public static readonly flags = {
+    input: Flags.string({
+      char: 'i',
+      summary: messages.getMessage('flags.input.summary'),
+      aliases: ['inputfile', 'f'],
+      deprecateAliases: true,
     }),
-    outputfile: flags.filepath({
+    output: Flags.string({
       char: 'o',
-      description: 'the path of the output CSV file (default: standard output)',
+      summary: messages.getMessage('flags.output.summary'),
+      aliases: ['outputfile'],
+      deprecateAliases: true,
     }),
-    encoding: flags.string({
+    encoding: Flags.string({
       char: 'e',
       default: 'utf8',
-      description: 'the input CSV file encoding',
+      summary: messages.getMessage('flags.encoding.summary'),
     }),
-    delimiter: flags.string({
+    delimiter: Flags.string({
       char: 'd',
       default: ',',
-      description: 'the input CSV file delimiter',
+      summary: messages.getMessage('flags.delimiter.summary'),
     }),
-    quote: flags.string({
+    quote: Flags.string({
       char: 'q',
       default: '"',
-      description: 'the input CSV file quote character',
+      summary: messages.getMessage('flags.quote.summary'),
     }),
-    skiplines: flags.integer({
+    skiplines: Flags.integer({
       default: 0,
-      description: 'the number of lines to skip',
+      summary: messages.getMessage('flags.skiplines.summary'),
     }),
-    trim: flags.boolean({ description: 'trim all white space from columns' }),
-    mapping: flags.filepath({
+    trim: Flags.boolean({ summary: messages.getMessage('flags.trim.summary') }),
+    mapping: Flags.string({
       char: 'm',
-      description: 'the path of the JSON file that defines CSV column mappings',
+      summary: messages.getMessage('flags.mapping.summary'),
     }),
-    converter: flags.filepath({
+    converter: Flags.string({
       char: 'c',
-      description: 'the path of the script to convert CSV rows',
+      summary: messages.getMessage('flags.converter.summary'),
     }),
   };
 
   public async run(): Promise<JsonMap[]> {
-    const {
-      inputfile,
-      outputfile,
-      mapping,
-      converter,
-      encoding,
-      delimiter,
-      quote,
-      skiplines,
-      trim,
-    } = this.flags;
+    const { flags } = await this.parse(CsvConvert);
+    const { converter, encoding, delimiter, quote, skiplines, trim } = flags;
 
-    const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
+    const mapping = flags.mapping
+      ? await fs.readJson(flags.mapping)
+      : undefined;
     const convert = converter ? this.loadConverter(converter) : undefined;
 
-    const input = inputfile ? fs.createReadStream(inputfile) : process.stdin;
+    const input = flags.input
+      ? fs.createReadStream(flags.input)
+      : process.stdin;
     const rows = await parseCsv(input, {
       encoding,
       delimiter,
       quote,
       skiplines,
       trim,
-      mapping: mappingJson,
+      mapping,
       convert,
     });
 
-    if (!this.flags.json) {
-      const output = outputfile
-        ? fs.createWriteStream(outputfile)
+    if (!this.jsonEnabled()) {
+      const output = flags.output
+        ? fs.createWriteStream(flags.output)
         : process.stdout;
       this.writeCsv(rows, output);
     }

@@ -48,7 +48,7 @@ export async function completeDefaultNamespace(
   return isArray ? results : results[0];
 }
 
-export function chunkMetadata<T>(type: string, metadata: T | T[]): Array<T[]> {
+export function chunkMetadata<T>(type: string, metadata: T | T[]): T[][] {
   // metadata limit: https://developer.salesforce.com/docs/atlas.en-us.api_meta.meta/api_meta/meta_createMetadata.htm
   const size =
     type === 'CustomMetadata' || type === 'CustomApplication' ? 200 : 10;
@@ -86,7 +86,7 @@ export function upsertMetadata(
     chunkMetadata(type, metadata).map((data) =>
       conn.metadata.upsert(type, data)
     )
-  ).then((a) => a.flat() as UpsertResult[]);
+  ).then((a) => a.flat());
 }
 
 export function deleteMetadata(

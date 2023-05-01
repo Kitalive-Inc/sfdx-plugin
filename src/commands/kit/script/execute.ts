@@ -1,48 +1,50 @@
-import { flags, SfdxCommand } from '@salesforce/command';
-import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as repl from 'repl';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  optionalOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
+import * as fs from 'fs-extra';
 import yargs from 'yargs';
 
-export default class ScriptExecuteCommand extends SfdxCommand {
-  public static description = [
-    'execute Node.js scripts in SfdxCommand context',
-    'Available variables in Node.js scripts',
-    '  argv: Parsed command line arguments after the file option',
-    '  conn: jsforce Connection',
-    '  context: SfdxCommand',
-  ].join('\n');
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'script.execute'
+);
 
-  public static examples = [
-    '$ sfdx kit:script -f ./path/to/script.js',
-    '$ sfdx kit:script:execute',
-    "> await conn.query('SELECT Id, Name FROM Account LIMIT 1')",
-    'Top level await is not enabled by default in REPL before Node.js v16',
-    '$ NODE_OPTIONS=--experimental-repl-await sfdx kit:script:execute',
-  ];
+export default class ScriptExecute extends SfCommand<void> {
+  public static readonly summary = messages.getMessage('summary');
+  public static readonly description = messages.getMessage('description');
 
-  public static aliases = ['kit:script'];
+  public static readonly examples = messages.getMessages('examples');
+
+  public static readonly aliases = ['kit:script'];
   public static strict = false;
-  protected static supportsUsername = true;
-  protected static requiresProject = false;
 
-  protected static flagsConfig = {
-    file: flags.filepath({
+  public static readonly flags = {
+    file: Flags.string({
       char: 'f',
-      description: 'the path of the Node.js script file to execute',
+      summary: messages.getMessage('flags.file.summary'),
     }),
+    'target-org': optionalOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<void> {
-    const { file } = this.flags;
+    const { flags } = await this.parse(ScriptExecute);
+    const conn = flags['target-org']?.getConnection();
     module.paths.push('./node_modules');
+    module.paths.push('.');
 
-    if (file) {
-      const fileIndex = process.argv.indexOf(file);
+    if (flags.file) {
+      const fileIndex = process.argv.indexOf(flags.file);
       const argv = yargs([]).parse(process.argv.slice(fileIndex + 1));
-      const script = fs.readFileSync(file).toString('utf8');
+      const script = fs.readFileSync(flags.file).toString('utf8');
       const loader = (name) => {
-        if (name.startsWith('.')) name = path.resolve(path.dirname(file), name);
+        if (name.startsWith('.'))
+          name = path.resolve(path.dirname(flags.file), name);
         return require(name);
       };
       // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -53,18 +55,14 @@ export default class ScriptExecuteCommand extends SfdxCommand {
         'context',
         'conn',
         script
-      )(loader, argv, this, this.org?.getConnection());
+      )(loader, argv, this, conn);
     } else {
-      this.ux.log('Starting sfdx REPL mode');
-      this.ux.log('Available variables');
-      this.ux.log('  conn: jsforce Connection');
-      this.ux.log('  context: SfdxCommand');
-      this.ux.log('Type .exit or Press Ctrl+D to exit the REPL');
+      this.log(messages.getMessage('repl.start'));
 
       const replServer = repl.start('> ');
       replServer.context.require = require;
       replServer.context.context = this;
-      replServer.context.conn = this.org?.getConnection();
+      replServer.context.conn = conn;
 
       return new Promise((resolve) => replServer.on('exit', () => resolve()));
     }

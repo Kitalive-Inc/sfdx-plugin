@@ -1,4 +1,9 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import * as csv from 'fast-csv';
 import * as fs from 'fs-extra';
 import { getCustomFields } from '../../../../metadata';
@@ -31,36 +36,37 @@ const csvHeaders = [
   'inlineHelpText',
 ];
 
-export default class FieldsDescribeCommand extends SfdxCommand {
-  public static description = 'describe object fields information';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'object.fields.describe'
+);
 
-  public static examples = [
-    '$ sfdx kit:object:fields:describe -o Account -f path/to/account_fields.csv',
-    '$ sfdx kit:object:fields:describe -u me@my.org -o CustomObject__c --json',
-  ];
+export default class FieldsDescribe extends SfCommand<CustomField[]> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = false;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    object: flags.string({
-      char: 'o',
+  public static readonly flags = {
+    sobject: Flags.string({
+      char: 's',
       required: true,
-      description: 'SObject name',
+      summary: messages.getMessage('flags.sobject.summary'),
     }),
-    file: flags.string({
+    file: Flags.string({
       char: 'f',
-      description: 'output csv file path',
+      summary: messages.getMessage('flags.file.summary'),
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<CustomField[]> {
-    const { object, file, json } = this.flags;
-    const conn = this.org.getConnection();
-    this.ux.startSpinner(`describe ${object} fields`);
-    const results = await getCustomFields(conn, object);
-    this.ux.stopSpinner();
-    if (!json) {
+    const { flags } = await this.parse(FieldsDescribe);
+    const conn = flags['target-org'].getConnection();
+    this.spinner.start(messages.getMessage('spinner.start', [flags.sobject]));
+    const results = await getCustomFields(conn, flags.sobject);
+    this.spinner.stop();
+    if (!this.jsonEnabled()) {
       const rows = results.map(({ valueSet, ...row }) => {
         if (valueSet) {
           const { restricted, valueSetDefinition, valueSetName } = valueSet;
@@ -79,7 +85,7 @@ export default class FieldsDescribeCommand extends SfdxCommand {
         }
         return row;
       });
-      this.writeCsv(file, rows);
+      this.writeCsv(flags.file, rows);
     }
     return results;
   }

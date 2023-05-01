@@ -1,46 +1,47 @@
-import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
-import { stubMethod } from '@salesforce/ts-sinon';
-import * as fs from 'fs-extra';
-import { Connection } from 'jsforce';
 import * as repl from 'repl';
+import { Connection } from '@salesforce/core';
+import { TestContext } from '@salesforce/core/lib/testSetup';
+import { stubSfCommandUx } from '@salesforce/sf-plugins-core';
+import { stubMethod } from '@salesforce/ts-sinon';
+import { expect } from 'chai';
+import * as fs from 'fs-extra';
+import { spy } from 'sinon';
 import Command from '../../../../src/commands/kit/script/execute';
 
-const commandName = 'kit:script:execute';
-describe(commandName, () => {
-  const $$ = testSetup();
+describe('kit script execute', () => {
+  const $$ = new TestContext();
 
-  const validateVariables = jest.fn();
+  const validateVariables = spy();
 
   Object.assign(global, { validateVariables });
   const script = `
     validateVariables(conn, context);
   `;
+
   beforeEach(async () => {
-    await $$.stubAuths(new MockTestOrgData());
+    stubSfCommandUx($$.SANDBOX);
   });
 
-  const args = ['-u', 'test@foo.bar'];
+  const args = ['-o', 'test@foo.bar'];
   it('script mode', async () => {
-    const readFileSync = stubMethod($$.SANDBOX, fs, 'readFileSync').returns(
-      script
-    );
-    await Command.run(args.concat(['-f', 'path/to/script.js']));
-    expect(validateVariables.mock.calls.length).toBe(1);
-    expect(validateVariables.mock.calls[0][0] instanceof Connection).toBe(true);
-    expect(validateVariables.mock.calls[0][1] instanceof Command).toBe(true);
+    stubMethod($$.SANDBOX, fs, 'readFileSync').returns(script);
+    await Command.run(args.concat('-f', 'path/to/script.js'));
+    expect(validateVariables.calledOnce).to.be.true;
+    expect(validateVariables.args[0][0] instanceof Connection).to.be.true;
+    expect(validateVariables.args[0][1] instanceof Command).to.be.true;
   });
 
   it('REPL mode', async () => {
     const replServer = {
       context: {},
       on: (event, callback) => {
-        expect(event).toEqual('exit');
+        expect(event).to.eq('exit');
         callback();
       },
     };
     stubMethod($$.SANDBOX, repl, 'start').returns(replServer);
     await Command.run(args);
-    expect(replServer.context['conn'] instanceof Connection).toBe(true);
-    expect(replServer.context['context'] instanceof Command).toBe(true);
+    expect(replServer.context['conn'] instanceof Connection).to.be.true;
+    expect(replServer.context['context'] instanceof Command).to.be.true;
   });
 });

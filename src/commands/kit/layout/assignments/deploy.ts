@@ -1,38 +1,48 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import * as path from 'path';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import * as fs from 'fs-extra';
 import { SaveResult } from 'jsforce/api/metadata';
-import * as path from 'path';
 import { LayoutAssignmentsPerProfile } from '../../../../types';
 import { updateMetadata } from '../../../../metadata';
 
-export default class LayoutAssignmentsDeployCommand extends SfdxCommand {
-  public static description = 'deploy page layout assignments from JSON file';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'layout.assignments.deploy'
+);
 
-  public static examples = [
-    '$ sfdx kit:layout:assignments:deploy',
-    '$ sfdx kit:layout:assignments:deploy -f config/layout-assignments.scratch.json',
-    '$ sfdx kit:layout:assignments:deploy -u me@my.org -f config/layout-assignments.sandbox.json',
-  ];
+export default class LayoutAssignmentsDeploy extends SfCommand<SaveResult[]> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = true;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    file: flags.string({
+  public static readonly requiresProject = true;
+
+  public static readonly flags = {
+    file: Flags.string({
       char: 'f',
       required: true,
-      description: 'input file path',
+      summary: messages.getMessage('flags.file.summary'),
       default: 'config/layout-assignments.json',
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<SaveResult[]> {
-    this.ux.log('deploy layout assignments from ' + this.flags.file);
-    const layoutAssignmentsPerProfile = await this.readFile(this.flags.file);
+    const { flags } = await this.parse(LayoutAssignmentsDeploy);
+    const conn = flags['target-org'].getConnection();
+
+    this.spinner.start(messages.getMessage('spinner.start', [flags.file]));
+    const layoutAssignmentsPerProfile = await this.readFile(flags.file);
     const profiles = Object.entries(layoutAssignmentsPerProfile).map(
       ([fullName, layoutAssignments]) => ({ fullName, layoutAssignments })
     );
-    return updateMetadata(this.org.getConnection(), 'Profile', profiles);
+    return updateMetadata(conn, 'Profile', profiles);
   }
 
   private readFile(file): Promise<LayoutAssignmentsPerProfile> {

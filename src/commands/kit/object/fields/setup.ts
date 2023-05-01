@@ -1,4 +1,9 @@
-import { flags, SfdxCommand } from '@salesforce/command';
+import { Messages } from '@salesforce/core';
+import {
+  Flags,
+  SfCommand,
+  requiredOrgFlagWithDeprecations,
+} from '@salesforce/sf-plugins-core';
 import * as fs from 'fs-extra';
 import {
   upsertMetadata,
@@ -179,51 +184,52 @@ function setPicklistOptions(field, existingField) {
   }
 }
 
-export default class FieldsSetupCommand extends SfdxCommand {
-  public static description = 'upsert and delete object fields from a CSV file';
+Messages.importMessagesDirectory(__dirname);
+const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'object.fields.setup'
+);
 
-  public static examples = [
-    '$ sfdx kit:object:fields:setup -o Account -f path/to/account_fields.csv',
-    '$ sfdx kit:object:fields:setup -u me@my.org -o CustomObject__c -f path/to/custom_object_fields.csv --delete',
-  ];
+export default class FieldsSetup extends SfCommand<SetupResult[]> {
+  public static readonly summary = messages.getMessage('summary');
 
-  protected static requiresUsername = true;
-  protected static requiresProject = false;
+  public static readonly examples = messages.getMessages('examples');
 
-  protected static flagsConfig = {
-    object: flags.string({
-      char: 'o',
+  public static readonly flags = {
+    sobject: Flags.string({
+      char: 's',
       required: true,
-      description: 'SObject name',
+      summary: messages.getMessage('flags.sobject.summary'),
     }),
-    file: flags.string({
+    file: Flags.string({
       char: 'f',
       required: true,
-      description: 'input csv file path',
+      summary: messages.getMessage('flags.file.summary'),
     }),
-    delete: flags.boolean({
-      description: 'delete fields that are not in the csv file',
+    delete: Flags.boolean({
+      summary: messages.getMessage('flags.delete.summary'),
     }),
-    force: flags.boolean({
-      description: 'Do not confirm when deleting',
+    force: Flags.boolean({
+      summary: messages.getMessage('flags.force.summary'),
     }),
+    'target-org': requiredOrgFlagWithDeprecations,
   };
 
   public async run(): Promise<SetupResult[]> {
-    const { object, file, delete: del, force } = this.flags;
-    const conn = this.org.getConnection();
+    const { flags } = await this.parse(FieldsSetup);
+    const conn = flags['target-org'].getConnection();
     const namespace = await getOrgNamespace(conn);
     const pattern = namespace ? new RegExp(`^${namespace}__`, 'g') : null;
     const removeNamespace = (name: string) =>
       pattern ? name.replace(pattern, '') : name;
 
-    this.ux.startSpinner('parse ' + file);
+    this.spinner.start('parse ' + flags.file);
     const fields = (await parseCsv(
-      fs.createReadStream(file)
+      fs.createReadStream(flags.file)
     )) as unknown as CustomField[];
-    this.ux.stopSpinner();
+    this.spinner.stop();
 
-    const existingFieldMap = await getCustomFieldMap(conn, object);
+    const existingFieldMap = await getCustomFieldMap(conn, flags.sobject);
     const oldFieldMap = new Map(existingFieldMap);
 
     for (const field of fields) {
@@ -231,27 +237,29 @@ export default class FieldsSetupCommand extends SfdxCommand {
       const existingField = existingFieldMap.get(name);
       existingFieldMap.delete(name);
       setFieldOptions(field, existingField);
-      field.fullName = `${object}.${field.fullName}`;
+      field.fullName = `${flags.sobject}.${field.fullName}`;
     }
 
-    let deleteFields = del ? [...existingFieldMap.values()] : [];
-    if (deleteFields.length && !force) {
-      const confirmed = await this.ux.confirm(
-        `delete fields: ${deleteFields
+    let deleteFields = flags.delete ? [...existingFieldMap.values()] : [];
+    if (deleteFields.length && !flags.force) {
+      const prompt = await this.prompt({
+        type: 'confirm',
+        name: 'deleteFields',
+        message: `delete fields: ${deleteFields
           .map(({ fullName }) => fullName)
-          .join(', ')}\nDo you want to delete the above fields? (y/n)`
-      );
-      if (!confirmed) deleteFields = [];
+          .join(', ')}\nDo you want to delete the above fields? (y/n)`,
+      });
+      if (!prompt.deleteFields) deleteFields = [];
     }
 
     const results = [];
     if (fields.length) {
-      this.ux.startSpinner('upsert fields');
-      this.logger.debug(fields);
+      this.spinner.start('upsert fields');
+      this.debug(fields);
       const upsertResults = await upsertMetadata(conn, 'CustomField', fields);
-      const newFieldMap = await getCustomFieldMap(conn, object);
+      const newFieldMap = await getCustomFieldMap(conn, flags.sobject);
       for (const { fullName, created, success, errors } of upsertResults) {
-        const name = fullName.slice(object.length + 1);
+        const name = fullName.slice(flags.sobject.length + 1);
         let result = created ? 'created' : success ? 'updated' : 'error';
         if (
           result === 'updated' &&
@@ -265,29 +273,35 @@ export default class FieldsSetupCommand extends SfdxCommand {
           error: errors.map((e) => e.message).join(', '),
         });
       }
-      this.ux.stopSpinner();
+      this.spinner.stop();
     }
 
     if (deleteFields.length) {
-      this.ux.startSpinner('delete fields');
-      this.logger.debug(deleteFields);
-      const names = deleteFields.map(({ fullName }) => `${object}.${fullName}`);
+      this.spinner.start('delete fields');
+      this.debug(deleteFields);
+      const names = deleteFields.map(
+        ({ fullName }) => `${flags.sobject}.${fullName}`
+      );
       for (const { fullName, success, errors } of await deleteMetadata(
         conn,
         'CustomField',
         names
       )) {
         results.push({
-          field: fullName.slice(object.length + 1),
+          field: fullName.slice(flags.sobject.length + 1),
           result: success ? 'deleted' : 'error',
           error: errors.map((e) => e.message).join(', '),
         });
       }
-      this.ux.stopSpinner();
+      this.spinner.stop();
     }
 
-    this.ux.styledHeader('Fields setup result');
-    this.ux.table(results, ['field', 'result', 'error']);
+    this.styledHeader('Fields setup result');
+    this.table(results, {
+      field: { header: 'FIELD' },
+      result: { header: 'RESULT' },
+      error: { header: 'ERROR' },
+    });
     return results;
   }
 }

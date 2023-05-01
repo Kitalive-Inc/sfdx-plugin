@@ -1,10 +1,18 @@
-import { MockTestOrgData, testSetup } from '@salesforce/core/lib/testSetup';
+import { expect } from 'chai';
+import { SfProject } from '@salesforce/core';
+import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
 import { spyMethod, stubMethod } from '@salesforce/ts-sinon';
+import { Config } from '@oclif/core';
 import Command from '../../../../../src/commands/kit/layout/assignments/retrieve';
 import * as metadata from '../../../../../src/metadata';
 
-describe('kit:layout:assignments:retrieve', () => {
-  const $$ = testSetup();
+describe('kit layout assignments retrieve', () => {
+  const $$ = new TestContext();
+  const testOrg = new MockTestOrgData();
+  const config = new Config({
+    root: __dirname + '/../../../../../package.json',
+  });
 
   const projectConfig = {
     packageDirectories: [
@@ -39,23 +47,24 @@ describe('kit:layout:assignments:retrieve', () => {
   ];
 
   let readMetadata: any;
-  let completeDefaultNamespace: any;
   let objectNamesFromLayouts: any;
   let findFiles: any;
   let getProfileNames: any;
   let readFile: any;
   let writeFile: any;
+  let ux: any;
+  let spinner: any;
   beforeEach(async () => {
-    await $$.stubAuths(new MockTestOrgData());
+    await $$.stubAuths(testOrg);
+    ux = stubSfCommandUx($$.SANDBOX);
+    spinner = stubSpinner($$.SANDBOX);
     readMetadata = stubMethod($$.SANDBOX, metadata, 'readMetadata').callsFake(
       async (conn, type, names: string[]) =>
         names.map((fullName) => ({ fullName, layoutAssignments }))
     );
-    completeDefaultNamespace = stubMethod(
-      $$.SANDBOX,
-      metadata,
-      'completeDefaultNamespace'
-    ).callsFake(async (conn, names) => names);
+    stubMethod($$.SANDBOX, metadata, 'completeDefaultNamespace').callsFake(
+      async (conn, names) => names
+    );
     objectNamesFromLayouts = spyMethod(
       $$.SANDBOX,
       Command.prototype,
@@ -84,15 +93,17 @@ describe('kit:layout:assignments:retrieve', () => {
   });
 
   it('only required arguments', async () => {
-    await Command.run(['-u', 'test@foo.bar']);
-    expect(objectNamesFromLayouts.calledOnce).toBe(true);
-    expect(findFiles.calledOnce).toBe(true);
-    expect(findFiles.args[0][0]).toMatch('force-app/**/*.layout-meta.xml');
-    expect(getProfileNames.calledOnce).toBe(true);
-    expect(readMetadata.calledOnce).toBe(true);
-    expect(readMetadata.args[0][2].length).toBe(12);
-    expect(readFile.called).toBe(false);
-    expect(writeFile.calledOnce).toBe(true);
+    const command = new Command(['-o', 'test@foo.bar'], config);
+    command.project = SfProject.getInstance();
+    await command.run();
+    expect(objectNamesFromLayouts.calledOnce).to.be.true;
+    expect(findFiles.calledOnce).to.be.true;
+    expect(findFiles.args[0][0]).to.contain('force-app/**/*.layout-meta.xml');
+    expect(getProfileNames.calledOnce).to.be.true;
+    expect(readMetadata.calledOnce).to.be.true;
+    expect(readMetadata.args[0][2].length).to.eq(12);
+    expect(readFile.called).to.be.false;
+    expect(writeFile.calledOnce).to.be.true;
 
     const data = {};
     for (let i = 1; i <= 12; i++) {
@@ -113,33 +124,47 @@ describe('kit:layout:assignments:retrieve', () => {
         },
       ];
     }
-    expect(writeFile.args[0]).toEqual(['config/layout-assignments.json', data]);
-    //expect(ctx.stdout).toMatch('profiles: profile1, profile2, profile3, ');
-    //expect(ctx.stdout).toMatch('objects: Account, Opportunity');
-    //expect(ctx.stdout).toMatch('save to config/layout-assignments.json');
+    expect(writeFile.args[0]).to.eql(['config/layout-assignments.json', data]);
+    expect(spinner.start.args[0][0]).to.eq('Retrieve page layout assignments');
+    expect(ux.log.args[0][0]).to.contain(
+      'Saved to config/layout-assignments.json:'
+    );
+    expect(ux.log.args[0][0]).to.contain(
+      'profiles: profile1, profile2, profile3, '
+    );
+    expect(ux.log.args[0][0]).to.contain('objects: Account, Opportunity');
   });
 
   it('with optional arguments', async () => {
-    await Command.run([
-      '-u',
-      'test@foo.bar',
-      '-f',
-      'config/test.json',
-      '-p',
-      'Admin,Standard',
-      '-o',
-      'Account,Contact',
-    ]);
-    expect(objectNamesFromLayouts.called).toBe(false);
-    expect(findFiles.called).toBe(false);
-    expect(getProfileNames.called).toBe(false);
-    expect(readMetadata.calledOnce).toBe(true);
-    expect(readMetadata.args[0][2]).toEqual(['Admin', 'Standard']);
-    expect(readFile.called).toBe(false);
-    expect(writeFile.calledOnce).toBe(true);
+    const command = new Command(
+      [
+        '-o',
+        'test@foo.bar',
+        '-f',
+        'config/test.json',
+        '-p',
+        'Admin',
+        '-p',
+        'Standard',
+        '-s',
+        'Account',
+        '-s',
+        'Contact',
+      ],
+      config
+    );
+    command.project = SfProject.getInstance();
+    await command.run();
+    expect(objectNamesFromLayouts.called).to.be.false;
+    expect(findFiles.called).to.be.false;
+    expect(getProfileNames.called).to.be.false;
+    expect(readMetadata.calledOnce).to.be.true;
+    expect(readMetadata.args[0][2]).to.eql(['Admin', 'Standard']);
+    expect(readFile.called).to.be.false;
+    expect(writeFile.calledOnce).to.be.true;
 
     const data = {};
-    for (let profile of ['Admin', 'Standard']) {
+    for (const profile of ['Admin', 'Standard']) {
       data[profile] = [
         {
           layout: 'Account-Account Layout1.layout-meta.xml',
@@ -157,26 +182,32 @@ describe('kit:layout:assignments:retrieve', () => {
         },
       ];
     }
-    expect(writeFile.args[0]).toEqual(['config/test.json', data]);
-    //expect(ctx.stdout).toMatch('profiles: Admin, Standard');
-    //expect(ctx.stdout).toMatch('objects: Account, Contact');
-    //expect(ctx.stdout).toMatch('save to config/test.json');
+    expect(writeFile.args[0]).to.eql(['config/test.json', data]);
+    expect(spinner.start.args[0][0]).to.eq('Retrieve page layout assignments');
+    expect(ux.log.args[0][0]).to.contain('Saved to config/test.json');
+    expect(ux.log.args[0][0]).to.contain('profiles: Admin, Standard');
+    expect(ux.log.args[0][0]).to.contain('objects: Account, Contact');
   });
 
   it('with merge option', async () => {
-    await Command.run([
-      '-u',
-      'test@foo.bar',
-      '-f',
-      'config/test.json',
-      '-p',
-      'Standard',
-      '--merge',
-    ]);
-    expect(readFile.calledOnce).toBe(true);
-    expect(readFile.args[0][0]).toBe('config/test.json');
-    expect(writeFile.calledOnce).toBe(true);
-    expect(writeFile.args[0]).toEqual([
+    const command = new Command(
+      [
+        '-o',
+        'test@foo.bar',
+        '-f',
+        'config/test.json',
+        '-p',
+        'Standard',
+        '--merge',
+      ],
+      config
+    );
+    command.project = SfProject.getInstance();
+    await command.run();
+    expect(readFile.calledOnce).to.be.true;
+    expect(readFile.args[0][0]).to.eq('config/test.json');
+    expect(writeFile.calledOnce).to.be.true;
+    expect(writeFile.args[0]).to.eql([
       'config/test.json',
       {
         Admin: [{ layout: 'Account-Account Layout.layout-meta.xml' }],
