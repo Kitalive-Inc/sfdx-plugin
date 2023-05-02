@@ -4,6 +4,7 @@ import {
   SfCommand,
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
+import { JsonMap } from '@salesforce/ts-types';
 import * as fs from 'fs-extra';
 import {
   upsertMetadata,
@@ -14,13 +15,15 @@ import {
 import { CustomField, CustomValue } from '../../../../types';
 import { parseCsv } from '../../../../utils';
 
+type ResultType = 'created' | 'updated' | 'deleted' | 'identical' | 'error';
 type SetupResult = {
   field: string;
-  result: 'created' | 'updated' | 'deleted' | 'identical' | 'error';
+  result: ResultType;
   error?: string;
 };
 
-const deepCopy = (object) => object && JSON.parse(JSON.stringify(object));
+const deepCopy = <T>(object: T): T =>
+  object && (JSON.parse(JSON.stringify(object)) as T);
 const deepEquals = (obj1, obj2) =>
   JSON.stringify(obj1) === JSON.stringify(obj2);
 
@@ -97,7 +100,7 @@ export function setFieldOptions(field, existingField) {
   }
 }
 
-function normalizeFilterItems(items) {
+function normalizeFilterItems(items: JsonMap[]): JsonMap[] {
   return items.map((item) => {
     item = { ...item };
     if (item.value === null) delete item.value;
@@ -143,10 +146,10 @@ function setPicklistOptions(field, existingField) {
       valueSet.valueSetDefinition ??= { value: [] };
       const oldOptionMap = new Map<string, CustomValue>(
         valueSet.valueSetDefinition.value.map((option) => [
-          option.valueName,
+          option.valueName as string,
           Object.fromEntries(
             Object.entries(option).filter((keyval) => keyval[1] !== null)
-          ),
+          ) as CustomValue,
         ])
       );
       const options = values.split(/;|[\r\n]+/).map((value) => {
@@ -160,7 +163,9 @@ function setPicklistOptions(field, existingField) {
 
       // handle options to be deleted
       if (oldOptionMap.size) {
-        const newOptionMap = new Map(options.map((o) => [o.label, o]));
+        const newOptionMap = new Map(
+          options.map((o) => [o.label as string, o as CustomValue])
+        );
         for (const { valueName, label } of oldOptionMap.values()) {
           // detect API name changes and change label to avoid duplicate labels
           if (newOptionMap.has(label))
@@ -252,7 +257,7 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
       if (!prompt.deleteFields) deleteFields = [];
     }
 
-    const results = [];
+    const results: SetupResult[] = [];
     if (fields.length) {
       this.spinner.start('upsert fields');
       this.debug(fields);
@@ -260,7 +265,11 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
       const newFieldMap = await getCustomFieldMap(conn, flags.sobject);
       for (const { fullName, created, success, errors } of upsertResults) {
         const name = fullName.slice(flags.sobject.length + 1);
-        let result = created ? 'created' : success ? 'updated' : 'error';
+        let result: ResultType = created
+          ? 'created'
+          : success
+          ? 'updated'
+          : 'error';
         if (
           result === 'updated' &&
           deepEquals(newFieldMap.get(name), oldFieldMap.get(name))

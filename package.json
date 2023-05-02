@@ -83,7 +83,7 @@
     "compile": "sf-compile",
     "docs": "sf-docs",
     "format": "sf-format",
-    "lint": "sf-lint",
+    "lint": "eslint src/**/*.ts",
     "postinstall": "yarn husky install",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "yarn lint",

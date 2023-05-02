@@ -47,6 +47,6 @@ export default class LayoutAssignmentsDeploy extends SfCommand<SaveResult[]> {
 
   private readFile(file): Promise<LayoutAssignmentsPerProfile> {
     const inputFile = path.join(this.project.getPath(), file);
-    return fs.readJson(inputFile);
+    return fs.readJson(inputFile) as Promise<LayoutAssignmentsPerProfile>;
   }
 }

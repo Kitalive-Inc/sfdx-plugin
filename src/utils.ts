@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { pipeline } from 'stream';
+import { Command } from '@oclif/core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import { decodeStream } from 'iconv-lite';
@@ -45,12 +46,12 @@ export function parseCsv(
       .parse({
         headers: true,
         ignoreEmpty: true,
-        delimiter: delimiter === '\\t' ? '\t' : delimiter || ',',
+        delimiter: delimiter === '\\t' ? '\t' : delimiter ?? ',',
         quote: quote ?? '"',
         skipLines: skiplines,
         trim,
       })
-      .on('data', (row) => {
+      .on('data', (row: JsonMap) => {
         try {
           if (mapper) row = mapper(row);
           if (convert) row = convert(row);
@@ -59,13 +60,13 @@ export function parseCsv(
         } catch (e) {
           throw new Error(
             `A error occurred in csv file at line ${lines}: ${
-              e.message
+              (e as Error).message
             }\ndata: ${JSON.stringify(row)}`
           );
         }
       });
 
-    const callback = (e) => (e ? reject(e) : resolve(rows));
+    const callback = (e): void => (e ? reject(e) : resolve(rows));
     if (!encoding || encoding === 'utf8') {
       pipeline(input, parser, callback);
     } else {
@@ -74,20 +75,26 @@ export function parseCsv(
   });
 }
 
-export function loadScript(file) {
+export type Converter = {
+  start?: (context: Command) => void;
+  convert: (row: JsonMap) => JsonMap;
+  finish?: (rows: JsonMap[], context: Command) => JsonMap[];
+};
+export function loadScript(file: string): Converter {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const script = require(path.resolve(file));
+  const script = require(path.resolve(file)) as Converter;
   if (!script.convert) throw new Error('function convert is not exported');
   return script;
 }
 
-export function columnMapper(mapping) {
+export function columnMapper(mapping: JsonMap): (row: JsonMap) => JsonMap {
   const keys = Object.keys(mapping);
-  return (row) => {
+  return (row: JsonMap) => {
     const result = {};
     for (const to of keys) {
-      const from = mapping[to];
+      const from = mapping[to] as string;
       if (!(from in row)) throw new Error(`The column '${from}' is not found`);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[to] = row[from];
     }
     return result;

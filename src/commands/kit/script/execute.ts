@@ -38,29 +38,29 @@ export default class ScriptExecute extends SfCommand<void> {
     module.paths.push('./node_modules');
     module.paths.push('.');
 
+    const createLoader = (baseDir) => (name) => {
+      if (name.startsWith('.')) name = path.resolve(baseDir, name);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return require(name);
+    };
     if (flags.file) {
       const fileIndex = process.argv.indexOf(flags.file);
       const argv = yargs([]).parse(process.argv.slice(fileIndex + 1));
       const script = fs.readFileSync(flags.file).toString('utf8');
-      const loader = (name) => {
-        if (name.startsWith('.'))
-          name = path.resolve(path.dirname(flags.file), name);
-        return require(name);
-      };
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      return await new asyncFunction(
-        'require',
-        'argv',
-        'context',
-        'conn',
-        script
-      )(loader, argv, this, conn);
+      await new asyncFunction('require', 'argv', 'context', 'conn', script)(
+        createLoader(path.dirname(flags.file)),
+        argv,
+        this,
+        conn
+      );
+      return;
     } else {
       this.log(messages.getMessage('repl.start'));
 
       const replServer = repl.start('> ');
-      replServer.context.require = require;
+      replServer.context.require = createLoader('.');
       replServer.context.context = this;
       replServer.context.conn = conn;
 

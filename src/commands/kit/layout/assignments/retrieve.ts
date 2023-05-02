@@ -92,11 +92,15 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       'Profile',
       profileNames
     )) as ProfileMetadata[];
+    const filterObjectFullNames = await completeDefaultNamespace(
+      conn,
+      filterObjects
+    );
     for (const profile of profiles) {
       if (!profile.fullName || !profile.layoutAssignments) continue;
       let assignmentsMap = assignmentsPerObject(
         profile.layoutAssignments,
-        await completeDefaultNamespace(conn, filterObjects)
+        filterObjectFullNames
       );
       if (data[profile.fullName]) {
         const oldAssignmentsMap = assignmentsPerObject(data[profile.fullName]);
@@ -104,7 +108,7 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       }
       data[profile.fullName] = Array.from(assignmentsMap.values())
         .flat()
-        .sort((a, b) => a.layout.localeCompare(b.layout));
+        .sort((a, b) => a.layout.localeCompare(b.layout) as number);
     }
     this.spinner.stop();
 
@@ -123,9 +127,9 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
   public async objectNamesFromLayouts(): Promise<string[]> {
     // eslint-disable-next-line
     const config: any = await this.getProjectConfig();
-    const packageDir =
-      config.packageDirectories &&
-      config.packageDirectories.find((dir) => dir.default);
+    const packageDir = config.packageDirectories?.find(
+      (dir) => dir.default as boolean
+    );
     if (!packageDir) return [];
 
     const pattern = path.join(
@@ -133,13 +137,13 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       packageDir.path,
       '**/*.layout-meta.xml'
     );
-    const objectCounts = {};
+    const objectCounts = new Map<string, number>();
     for (const filepath of await this.findFiles(pattern)) {
       const object = path.basename(filepath).split('-')[0];
-      objectCounts[object] = (objectCounts[object] || 0) + 1;
+      objectCounts.set(object, (objectCounts.get(object) ?? 0) + 1);
     }
-    return Object.keys(objectCounts)
-      .filter((object) => objectCounts[object] >= 2)
+    return [...objectCounts.keys()]
+      .filter((object) => objectCounts.get(object) >= 2)
       .sort();
   }
 
@@ -158,12 +162,17 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
   }
 
   private readFile(file: string): Promise<LayoutAssignmentsPerProfile> {
-    return fs.readJson(path.join(this.project.getPath(), file));
+    return fs.readJson(
+      path.join(this.project.getPath(), file)
+    ) as Promise<LayoutAssignmentsPerProfile>;
   }
 
-  private writeFile(file: string, data: LayoutAssignmentsPerProfile) {
+  private writeFile(
+    file: string,
+    data: LayoutAssignmentsPerProfile
+  ): Promise<void> {
     return fs.outputJson(path.join(this.project.getPath(), file), data, {
       spaces: '\t',
-    });
+    }) as Promise<void>;
   }
 }

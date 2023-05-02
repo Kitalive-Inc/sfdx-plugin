@@ -9,13 +9,13 @@ import {
 import { chunk } from './utils';
 import { CustomField } from './types';
 
-let orgNamespace;
+let orgNamespace: string;
 export async function getOrgNamespace(conn: Connection): Promise<string> {
   if (orgNamespace === undefined) {
     const {
       records: [{ NamespacePrefix }],
     } = await conn.query('SELECT NamespacePrefix FROM Organization');
-    orgNamespace = NamespacePrefix;
+    orgNamespace = NamespacePrefix as string;
   }
   return orgNamespace;
 }
@@ -129,9 +129,10 @@ export async function getCustomFields(
     // Avoid error when including metadata field
     const ids = (
       await conn.tooling.sobject('CustomField').find(condition, 'Id')
-    ).map((r) => r['Id']);
+    ).map((r) => r.Id);
     for (const Id of ids) {
       fields = fields.concat(
+        // eslint-disable-next-line no-await-in-loop
         (await conn.tooling
           .sobject('CustomField')
           .find(

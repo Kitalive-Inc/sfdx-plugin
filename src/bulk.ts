@@ -1,3 +1,4 @@
+/* eslint-disable */
 import * as path from 'path';
 import { Messages } from '@salesforce/core';
 import {
@@ -199,7 +200,9 @@ export const createBulkCommand = (operation: IngestOperation) =>
       } = flags;
 
       const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
-      const script = converter ? utils.loadScript(converter) : {};
+      const script = converter
+        ? utils.loadScript(converter)
+        : ({} as utils.Converter);
       const fieldTypes = await this.getFieldTypes(conn, sobject);
 
       this.spinner.start('Processing csv');

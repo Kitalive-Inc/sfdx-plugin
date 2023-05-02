@@ -90,7 +90,7 @@ export default class FieldsDescribe extends SfCommand<CustomField[]> {
     return results;
   }
 
-  writeCsv(file, rows) {
+  private writeCsv(file, rows) {
     csv
       .write(rows, { headers: csvHeaders, writeBOM: true })
       .pipe(file ? fs.createWriteStream(file) : process.stdout);
