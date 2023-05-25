@@ -98,7 +98,9 @@ describe('kit layout assignments retrieve', () => {
     await command.run();
     expect(objectNamesFromLayouts.calledOnce).to.be.true;
     expect(findFiles.calledOnce).to.be.true;
-    expect(findFiles.args[0][0]).to.contain('force-app/**/*.layout-meta.xml');
+    expect(findFiles.args[0][0].replaceAll('\\', '/')).to.contain(
+      'force-app/**/*.layout-meta.xml'
+    );
     expect(getProfileNames.calledOnce).to.be.true;
     expect(readMetadata.calledOnce).to.be.true;
     expect(readMetadata.args[0][2].length).to.eq(12);
