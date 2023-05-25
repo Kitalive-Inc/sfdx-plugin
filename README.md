@@ -6,7 +6,7 @@
 ## Install
 
 ```
-sfdx plugins:install @kitalive/sfdx-plugin
+sf plugins install @kitalive/sfdx-plugin
 ```
 
 ## Usage
