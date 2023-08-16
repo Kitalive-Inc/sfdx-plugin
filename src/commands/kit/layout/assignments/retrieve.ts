@@ -66,11 +66,12 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       summary: messages.getMessage('flags.merge.summary'),
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<LayoutAssignmentsPerProfile> {
     const { flags } = await this.parse(LayoutAssignmentsRetrieve);
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     const filterObjects = flags.sobject
       ? flags.sobject
       : await this.objectNamesFromLayouts();

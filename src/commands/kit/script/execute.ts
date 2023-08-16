@@ -30,11 +30,12 @@ export default class ScriptExecute extends SfCommand<void> {
       summary: messages.getMessage('flags.file.summary'),
     }),
     'target-org': optionalOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(ScriptExecute);
-    const conn = flags['target-org']?.getConnection();
+    const conn = flags['target-org']?.getConnection(flags['api-version']);
     module.paths.push('./node_modules');
     module.paths.push('.');
 

@@ -31,11 +31,12 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       summary: messages.getMessage('flags.csvfile.summary'),
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<JsonMap[]> {
     const { flags } = await this.parse();
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     const file = flags.csvfile;
 
     this.spinner.start('Bulk query');

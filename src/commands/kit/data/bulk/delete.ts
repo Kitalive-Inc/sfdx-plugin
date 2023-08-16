@@ -50,11 +50,12 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       summary: bulkMessages.getMessage('flags.wait.summary'),
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<BulkResult> {
     const { flags } = await this.parse();
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     const query = parseQuery(flags.query);
     query.fields = [getField('Id')];
     const soql = composeQuery(query);

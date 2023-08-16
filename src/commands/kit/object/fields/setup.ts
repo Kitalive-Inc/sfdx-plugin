@@ -218,11 +218,12 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
       summary: messages.getMessage('flags.force.summary'),
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<SetupResult[]> {
     const { flags } = await this.parse(FieldsSetup);
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     const namespace = await getOrgNamespace(conn);
     const pattern = namespace ? new RegExp(`^${namespace}__`, 'g') : null;
     const removeNamespace = (name: string) =>

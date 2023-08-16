@@ -58,11 +58,12 @@ export default class FieldsDescribe extends SfCommand<CustomField[]> {
       summary: messages.getMessage('flags.file.summary'),
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<CustomField[]> {
     const { flags } = await this.parse(FieldsDescribe);
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     this.spinner.start(messages.getMessage('spinner.start', [flags.sobject]));
     const results = await getCustomFields(conn, flags.sobject);
     this.spinner.stop();

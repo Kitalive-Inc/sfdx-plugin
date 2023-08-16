@@ -181,6 +181,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
         summary: messages.getMessage('flags.wait.summary'),
       }),
       'target-org': requiredOrgFlagWithDeprecations,
+      'api-version': Flags.orgApiVersion(),
     };
 
     public org: Org;
@@ -188,7 +189,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
     public async run(): Promise<BulkResult> {
       const { flags } = await this.parse();
       this.org = flags['target-org'];
-      const conn = this.org.getConnection();
+      const conn = this.org.getConnection(flags['api-version']);
       const {
         sobject,
         csvfile,

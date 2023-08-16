@@ -31,11 +31,12 @@ export default class LayoutAssignmentsDeploy extends SfCommand<SaveResult[]> {
       default: 'config/layout-assignments.json',
     }),
     'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<SaveResult[]> {
     const { flags } = await this.parse(LayoutAssignmentsDeploy);
-    const conn = flags['target-org'].getConnection();
+    const conn = flags['target-org'].getConnection(flags['api-version']);
 
     this.spinner.start(messages.getMessage('spinner.start', [flags.file]));
     const layoutAssignmentsPerProfile = await this.readFile(flags.file);
