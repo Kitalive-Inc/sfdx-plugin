@@ -1,6 +1,6 @@
 /* eslint-disable */
 import * as path from 'path';
-import { Messages } from '@salesforce/core';
+import { Messages, Org } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
@@ -183,9 +183,12 @@ export const createBulkCommand = (operation: IngestOperation) =>
       'target-org': requiredOrgFlagWithDeprecations,
     };
 
+    public org: Org;
+
     public async run(): Promise<BulkResult> {
       const { flags } = await this.parse();
-      const conn = flags['target-org'].getConnection();
+      this.org = flags['target-org'];
+      const conn = this.org.getConnection();
       const {
         sobject,
         csvfile,
@@ -206,39 +209,38 @@ export const createBulkCommand = (operation: IngestOperation) =>
       const fieldTypes = await this.getFieldTypes(conn, sobject);
 
       this.spinner.start('Processing csv');
-
-      if (script.start) await script.start(this);
-
-      let rows = await this.parseCsv(fs.createReadStream(csvfile), {
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim: !!trim,
-        setnull,
-        mapping: mappingJson,
-        convert: script.convert,
-        fieldTypes,
-      });
-
-      if (script.finish) {
-        const result = await script.finish(rows, this);
-        if (result) rows = result;
-      }
-
-      this.spinner.stop();
-
-      if (flags.convertonly) {
-        const base = path.basename(csvfile, path.extname(csvfile));
-        this.saveCsv(
-          path.join(path.dirname(csvfile), base + '.converted.csv'),
-          rows
-        );
-        return;
-      }
-
-      this.spinner.start(`Bulk ${operation}`);
       try {
+        if (script.start) await script.start(this);
+
+        let rows = await this.parseCsv(fs.createReadStream(csvfile), {
+          encoding,
+          delimiter,
+          quote,
+          skiplines,
+          trim: !!trim,
+          setnull,
+          mapping: mappingJson,
+          convert: script.convert,
+          fieldTypes,
+        });
+
+        if (script.finish) {
+          const result = await script.finish(rows, this);
+          if (result) rows = result;
+        }
+
+        this.spinner.stop();
+
+        if (flags.convertonly) {
+          const base = path.basename(csvfile, path.extname(csvfile));
+          this.saveCsv(
+            path.join(path.dirname(csvfile), base + '.converted.csv'),
+            rows
+          );
+          return;
+        }
+
+        this.spinner.start(`Bulk ${operation}`);
         const result = await this.bulkLoad(conn, sobject, operation, rows, {
           extIdField: flags.externalid,
           concurrencyMode: flags.concurrencymode,
@@ -277,7 +279,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
           this.log(
             messages.getMessage('asyncJob', [
               this.config.bin,
-              flags['target-org'].options.aliasOrUsername,
+              this.org.getUsername(),
               result.job?.id,
             ])
           );
