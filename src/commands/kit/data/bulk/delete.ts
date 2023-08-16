@@ -82,7 +82,9 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
           .filter((r) => !r.success)
           .map((r) => ({ id: r.id, errors: r.errors.join(', ') }));
         this.spinner.stop(
-          `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
+          `${numberRecordsProcessed as number} processed, ${
+            numberRecordsFailed as number
+          } failed.`
         );
         if (errors.length) {
           this.styledHeader('Error details');

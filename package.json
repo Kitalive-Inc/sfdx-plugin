@@ -5,50 +5,53 @@
   "author": "Akihiro Ono",
   "bugs": "https://github.com/Kitalive-Inc/sfdx-plugin/issues",
   "dependencies": {
-    "@salesforce/sf-plugins-core": "^2",
-    "dayjs": "^1.11.7",
+    "@oclif/core": "^2",
+    "@salesforce/core": "^5",
+    "@salesforce/kit": "^3",
+    "@salesforce/sf-plugins-core": "^3",
+    "dayjs": "^1.11.9",
     "fast-csv": "^4.3.6",
     "fs-extra": "^11.1.1",
     "iconv-lite": "^0.6.3",
-    "soql-parser-js": "^4.7.1",
+    "soql-parser-js": "^4.9.2",
     "tslib": "^2",
-    "yargs": "^17.7.1"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "@oclif/test": "^2",
-    "@salesforce/cli-plugins-testkit": "^3",
-    "@salesforce/dev-config": "^3",
-    "@salesforce/dev-scripts": "^3",
-    "@salesforce/prettier-config": "^0.0.2",
+    "@salesforce/cli-plugins-testkit": "^4",
+    "@salesforce/dev-config": "^4",
+    "@salesforce/dev-scripts": "^5",
+    "@salesforce/prettier-config": "^0.0.3",
     "@salesforce/ts-sinon": "^1",
-    "@swc/core": "^1.3.50",
-    "@types/jest": "^29.5.0",
+    "@swc/core": "^1.3.77",
+    "@types/jest": "^29.5.3",
     "@types/yargs": "^17.0.24",
-    "@typescript-eslint/eslint-plugin": "^5.57.1",
-    "@typescript-eslint/parser": "^5.57.1",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "@typescript-eslint/parser": "^6.4.0",
     "chai": "^4",
-    "eslint": "^8.38.0",
-    "eslint-config-prettier": "^8.8.0",
-    "eslint-config-salesforce": "^1.2.0",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-config-salesforce": "^2.0.2",
     "eslint-config-salesforce-license": "^0.2.0",
-    "eslint-config-salesforce-typescript": "^1.1.1",
+    "eslint-config-salesforce-typescript": "^1.1.2",
     "eslint-plugin-header": "^3.1.1",
-    "eslint-plugin-import": "2.27.5",
-    "eslint-plugin-jsdoc": "^41.1.1",
-    "eslint-plugin-sf-plugin": "^1.15.1",
-    "husky": "^7.0.4",
+    "eslint-plugin-import": "2.28.0",
+    "eslint-plugin-jsdoc": "^46.4.6",
+    "eslint-plugin-sf-plugin": "^1.16.2",
+    "husky": "^8.0.3",
     "mocha": "^10",
     "nyc": "^15",
     "oclif": "^3",
-    "prettier": "^2.8.7",
+    "prettier": "^2",
     "pretty-quick": "^3.1.3",
     "shx": "0.3.4",
-    "sinon": "10",
+    "sinon": "15",
     "ts-node": "^10",
-    "typescript": "^4"
+    "typescript": "^5"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "files": [
     "/lib",
@@ -76,20 +79,121 @@
   },
   "repository": "Kitalive-Inc/sfdx-plugin",
   "scripts": {
-    "build": "sf-build",
+    "build": "wireit",
     "clean": "sf-clean",
     "clean-all": "sf-clean all",
     "clean:lib": "shx rm -rf lib && shx rm -rf coverage && shx rm -rf .nyc_output && shx rm -f oclif.manifest.json",
-    "compile": "sf-compile",
+    "compile": "wireit",
     "docs": "sf-docs",
-    "format": "sf-format",
-    "lint": "eslint src/**/*.ts",
+    "format": "wireit",
+    "lint": "wireit",
     "postinstall": "yarn husky install",
     "postpack": "shx rm -f oclif.manifest.json",
-    "posttest": "yarn lint",
     "prepack": "sf-prepack",
-    "pretest": "sf-compile-test",
-    "test": "sf-test",
+    "test": "wireit",
+    "test:nuts": "nyc mocha \"**/*.nut.ts\" --slow 4500 --timeout 600000 --parallel",
+    "test:only": "wireit",
     "version": "oclif readme"
+  },
+  "wireit": {
+    "build": {
+      "dependencies": [
+        "compile",
+        "lint"
+      ]
+    },
+    "compile": {
+      "command": "tsc -p . --pretty --incremental",
+      "files": [
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        "messages/**"
+      ],
+      "output": [
+        "lib/**",
+        "*.tsbuildinfo"
+      ],
+      "clean": "if-file-deleted"
+    },
+    "format": {
+      "command": "prettier --write \"+(src|test|schemas)/**/*.+(ts|js|json)|command-snapshot.json\"",
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "schemas/**/*.json",
+        "command-snapshot.json",
+        ".prettier*"
+      ],
+      "output": []
+    },
+    "lint": {
+      "command": "eslint src --color --cache --cache-location .eslintcache",
+      "files": [
+        "src/**/*.ts",
+        "messages/**",
+        "**/.eslint*",
+        "**/tsconfig.json"
+      ],
+      "output": []
+    },
+    "test:compile": {
+      "command": "tsc -p \"./test\" --pretty",
+      "files": [
+        "test/**/*.ts",
+        "**/tsconfig.json"
+      ],
+      "output": []
+    },
+    "test": {
+      "dependencies": [
+        "test:compile",
+        "test:only",
+        "lint"
+      ]
+    },
+    "test:only": {
+      "command": "nyc mocha \"test/**/*.test.ts\"",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "files": [
+        "test/**/*.ts",
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        ".mocha*",
+        "!*.nut.ts",
+        ".nycrc"
+      ],
+      "output": []
+    },
+    "test:command-reference": {
+      "command": "\"./bin/dev\" commandreference:generate --erroronwarnings",
+      "files": [
+        "src/**/*.ts",
+        "messages/**",
+        "package.json"
+      ],
+      "output": [
+        "tmp/root"
+      ]
+    },
+    "test:deprecation-policy": {
+      "command": "\"./bin/dev\" snapshot:compare",
+      "files": [
+        "src/**/*.ts"
+      ],
+      "output": [],
+      "dependencies": [
+        "compile"
+      ]
+    },
+    "test:json-schema": {
+      "command": "\"./bin/dev\" schema:compare",
+      "files": [
+        "src/**/*.ts",
+        "schemas"
+      ],
+      "output": []
+    }
   }
 }
