@@ -18,7 +18,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
 running command...
 $ sf (--version)
-@kitalive/sfdx-plugin/0.5.0 darwin-arm64 node-v18.16.0
+@kitalive/sfdx-plugin/0.5.0 darwin-arm64 node-v18.15.0
 $ sf --help [COMMAND]
 USAGE
   $ sf COMMAND
@@ -50,14 +50,15 @@ Bulk delete records by SOQL select query.
 
 ```
 USAGE
-  $ sf kit data bulk delete -q <value> -o <value> [--json] [--hard] [--concurrencymode <value>] [-s <value>] [-w
-  <value>]
+  $ sf kit data bulk delete -q <value> -o <value> [--json] [--hard] [--concurrencymode <value>] [-s <value>] [-w <value>]
+    [--api-version <value>]
 
 FLAGS
   -o, --target-org=<value>   (required) Username or alias of the target org.
   -q, --query=<value>        (required) SOQL query to delete
   -s, --batchsize=<value>    [default: 10000] The batch size of the job
   -w, --wait=<value>         The number of minutes to wait for the command to complete before displaying the results
+  --api-version=<value>      Override the api version used for api requests made by this command
   --concurrencymode=<value>  [default: Parallel] The concurrency mode (Parallel or Serial) for the job
   --hard                     Perform a hard delete
 
@@ -78,7 +79,7 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 USAGE
   $ sf kit data bulk insert -s <value> -f <value> -o <value> [--json] [-r <value>] [-e <value>] [-d <value>] [-q <value>]
     [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode <value>]
-    [--assignmentruleid <value>] [--batchsize <value>] [-w <value>]
+    [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
   -c, --converter=<value>     The path of the script to convert CSV rows
@@ -91,6 +92,7 @@ FLAGS
   -r, --resultfile=<value>    The CSV file path for writing the insert results
   -s, --sobject=<value>       (required) The SObject name to insert
   -w, --wait=<value>          The number of minutes to wait for the command to complete before displaying the results
+  --api-version=<value>       Override the api version used for api requests made by this command
   --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
   --batchsize=<value>         [default: 10000] The batch size of the job
   --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
@@ -124,12 +126,13 @@ Bulk query records.
 
 ```
 USAGE
-  $ sf kit data bulk query -q <value> -o <value> [--json] [-f <value>]
+  $ sf kit data bulk query -q <value> -o <value> [--json] [-f <value>] [--api-version <value>]
 
 FLAGS
   -f, --csvfile=<value>     [default: standard output] Output csv file
   -o, --target-org=<value>  (required) Username or alias of the target org.
   -q, --query=<value>       (required) SOQL query to export
+  --api-version=<value>     Override the api version used for api requests made by this command
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -148,7 +151,7 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 USAGE
   $ sf kit data bulk update -s <value> -f <value> -o <value> [--json] [-r <value>] [-e <value>] [-d <value>] [-q <value>]
     [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode <value>]
-    [--assignmentruleid <value>] [--batchsize <value>] [-w <value>]
+    [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
   -c, --converter=<value>     The path of the script to convert CSV rows
@@ -161,6 +164,7 @@ FLAGS
   -r, --resultfile=<value>    The CSV file path for writing the update results
   -s, --sobject=<value>       (required) The SObject name to update
   -w, --wait=<value>          The number of minutes to wait for the command to complete before displaying the results
+  --api-version=<value>       Override the api version used for api requests made by this command
   --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
   --batchsize=<value>         [default: 10000] The batch size of the job
   --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
@@ -196,7 +200,7 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 USAGE
   $ sf kit data bulk upsert -s <value> -f <value> -o <value> -i <value> [--json] [-r <value>] [-e <value>] [-d <value>]
     [-q <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode
-    <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>]
+    <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
   -c, --converter=<value>     The path of the script to convert CSV rows
@@ -210,6 +214,7 @@ FLAGS
   -r, --resultfile=<value>    The CSV file path for writing the upsert results
   -s, --sobject=<value>       (required) The SObject name to upsert
   -w, --wait=<value>          The number of minutes to wait for the command to complete before displaying the results
+  --api-version=<value>       Override the api version used for api requests made by this command
   --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
   --batchsize=<value>         [default: 10000] The batch size of the job
   --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
@@ -277,12 +282,13 @@ Deploy page layout assignments from JSON file.
 
 ```
 USAGE
-  $ sf kit layout assignments deploy -f <value> -o <value> [--json]
+  $ sf kit layout assignments deploy -f <value> -o <value> [--json] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        (required) [default: config/layout-assignments.json] Input file path of page layout
                             assignment settings.
   -o, --target-org=<value>  (required) Username or alias of the target org.
+  --api-version=<value>     Override the api version used for api requests made by this command
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -307,7 +313,8 @@ Retrieve page layout assignments and save to JSON file.
 
 ```
 USAGE
-  $ sf kit layout assignments retrieve -f <value> -o <value> [--json] [-p <value>] [-s <value>] [--merge]
+  $ sf kit layout assignments retrieve -f <value> -o <value> [--json] [-p <value>] [-s <value>] [--merge] [--api-version
+  <value>]
 
 FLAGS
   -f, --file=<value>        (required) [default: config/layout-assignments.json] Output file path of page layout
@@ -315,6 +322,7 @@ FLAGS
   -o, --target-org=<value>  (required) Username or alias of the target org.
   -p, --profile=<value>...  [default: all profiles] Profile names to retrieve
   -s, --sobject=<value>...  [default: sobjects which have multiple layouts] SObject names to retrieve
+  --api-version=<value>     Override the api version used for api requests made by this command
   --merge                   Merge retrieved configurations with existing file.
 
 GLOBAL FLAGS
@@ -340,12 +348,13 @@ Describe sobject fields information.
 
 ```
 USAGE
-  $ sf kit object fields describe -s <value> -o <value> [--json] [-f <value>]
+  $ sf kit object fields describe -s <value> -o <value> [--json] [-f <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        Output csv file path
   -o, --target-org=<value>  (required) Username or alias of the target org.
   -s, --sobject=<value>     (required) SObject name to describe
+  --api-version=<value>     Override the api version used for api requests made by this command
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -366,12 +375,13 @@ Upsert and delete sobject fields from a CSV file.
 
 ```
 USAGE
-  $ sf kit object fields setup -s <value> -f <value> -o <value> [--json] [--delete] [--force]
+  $ sf kit object fields setup -s <value> -f <value> -o <value> [--json] [--delete] [--force] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        (required) Input csv file path
   -o, --target-org=<value>  (required) Username or alias of the target org.
   -s, --sobject=<value>     (required) SObject name to setup
+  --api-version=<value>     Override the api version used for api requests made by this command
   --delete                  Delete fields that are not in the csv file
   --force                   Do not confirm when deleting
 
@@ -394,11 +404,12 @@ Execute Node.js scripts in SfCommand context.
 
 ```
 USAGE
-  $ sf kit script [--json] [-f <value>] [-o <value>]
+  $ sf kit script [--json] [-f <value>] [-o <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        The path of the Node.js script file to execute.
   -o, --target-org=<value>
+  --api-version=<value>     Override the api version used for api requests made by this command
 
 GLOBAL FLAGS
   --json  Format output as json.
@@ -436,11 +447,12 @@ Execute Node.js scripts in SfCommand context.
 
 ```
 USAGE
-  $ sf kit script execute [--json] [-f <value>] [-o <value>]
+  $ sf kit script execute [--json] [-f <value>] [-o <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        The path of the Node.js script file to execute.
   -o, --target-org=<value>
+  --api-version=<value>     Override the api version used for api requests made by this command
 
 GLOBAL FLAGS
   --json  Format output as json.
