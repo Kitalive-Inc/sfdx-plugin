@@ -34,7 +34,7 @@ export default class ScriptExecute extends SfCommand<void> {
   };
 
   public async run(): Promise<void> {
-    const { flags } = await this.parse(ScriptExecute);
+    const { flags, argv } = await this.parse(ScriptExecute);
     const conn = flags['target-org']?.getConnection(flags['api-version']);
     module.paths.push('./node_modules');
     module.paths.push('.');
@@ -45,14 +45,12 @@ export default class ScriptExecute extends SfCommand<void> {
       return require(name);
     };
     if (flags.file) {
-      const fileIndex = process.argv.indexOf(flags.file);
-      const argv = yargs([]).parse(process.argv.slice(fileIndex + 1));
       const script = fs.readFileSync(flags.file).toString('utf8');
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
       await new asyncFunction('require', 'argv', 'context', 'conn', script)(
         createLoader(path.dirname(flags.file)),
-        argv,
+        yargs([]).parse(argv as string[]),
         this,
         conn
       );
