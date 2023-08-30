@@ -4,9 +4,9 @@
 
   <%= config.bin %> <%= command.id %> -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-- %s MyObject\_\_c records with convert.js:
+- %s MyObject__c records with convert.js:
 
-  <%= config.bin %> <%= command.id %> -o MyObject**c -f ./path/to/MyObject**c.csv -c ./path/to/convert.js -w 10
+  <%= config.bin %> <%= command.id %> -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 
 # description
 

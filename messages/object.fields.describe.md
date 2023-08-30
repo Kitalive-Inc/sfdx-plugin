@@ -8,9 +8,9 @@ Describe sobject fields information.
 
   <%= config.bin %> <%= command.id %> -s Account -f path/to/account_fields.csv
 
-- Output CustomObject\_\_c fields of the specified org as JSON format:
+- Output CustomObject__c fields of the specified org as JSON format:
 
-  <%= config.bin %> <%= command.id %> -o me@my.org -s CustomObject\_\_c --json
+  <%= config.bin %> <%= command.id %> -o me@my.org -s CustomObject__c --json
 
 # flags.sobject.summary
 

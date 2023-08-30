@@ -16,6 +16,10 @@ Available variables in Node.js scripts
 
   <%= config.bin %> <%= command.id %> -f ./path/to/script.js
 
+- Execute from js file with arguments:
+
+  <%= config.bin %> <%= command.id %> -f ./path/to/script.js -- --opt1 val1 --opt2 val2 arg1 arg2
+
 - Execute in REPL mode:
 
   <%= config.bin %> <%= command.id %> -o target-org
@@ -23,9 +27,6 @@ Available variables in Node.js scripts
 - query a account from org in REPL
 
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
-
-  Top level await is not enabled by default in REPL before Node.js v16
-  $ NODE_OPTIONS=--experimental-repl-await <%= config.bin %> <%= command.id %>
 
 # flags.file.summary
 

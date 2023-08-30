@@ -8,9 +8,9 @@ Upsert and delete sobject fields from a CSV file.
 
   <%= config.bin %> <%= command.id %> -s Account -f path/to/account_fields.csv
 
-- Upsert and delete CustomObject\_\_c fields to the specified org:
+- Upsert and delete CustomObject__c fields to the specified org:
 
-  <%= config.bin %> <%= command.id %> -o me@my.org -s CustomObject\_\_c -f path/to/custom_object_fields.csv --delete
+  <%= config.bin %> <%= command.id %> -o me@my.org -s CustomObject__c -f path/to/custom_object_fields.csv --delete
 
 # flags.sobject.summary
 

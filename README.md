@@ -12,7 +12,6 @@ sf plugins install @kitalive/sfdx-plugin
 ## Usage
 
 <!-- usage -->
-
 ```sh-session
 $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
@@ -24,25 +23,23 @@ USAGE
   $ sf COMMAND
 ...
 ```
-
 <!-- usagestop -->
 
 ## Commands
 
 <!-- commands -->
-
-- [`sf kit data bulk delete`](#sf-kit-data-bulk-delete)
-- [`sf kit data bulk insert`](#sf-kit-data-bulk-insert)
-- [`sf kit data bulk query`](#sf-kit-data-bulk-query)
-- [`sf kit data bulk update`](#sf-kit-data-bulk-update)
-- [`sf kit data bulk upsert`](#sf-kit-data-bulk-upsert)
-- [`sf kit data csv convert`](#sf-kit-data-csv-convert)
-- [`sf kit layout assignments deploy`](#sf-kit-layout-assignments-deploy)
-- [`sf kit layout assignments retrieve`](#sf-kit-layout-assignments-retrieve)
-- [`sf kit object fields describe`](#sf-kit-object-fields-describe)
-- [`sf kit object fields setup`](#sf-kit-object-fields-setup)
-- [`sf kit script`](#sf-kit-script)
-- [`sf kit script execute`](#sf-kit-script-execute)
+* [`sf kit data bulk delete`](#sf-kit-data-bulk-delete)
+* [`sf kit data bulk insert`](#sf-kit-data-bulk-insert)
+* [`sf kit data bulk query`](#sf-kit-data-bulk-query)
+* [`sf kit data bulk update`](#sf-kit-data-bulk-update)
+* [`sf kit data bulk upsert`](#sf-kit-data-bulk-upsert)
+* [`sf kit data csv convert`](#sf-kit-data-csv-convert)
+* [`sf kit layout assignments deploy`](#sf-kit-layout-assignments-deploy)
+* [`sf kit layout assignments retrieve`](#sf-kit-layout-assignments-retrieve)
+* [`sf kit object fields describe`](#sf-kit-object-fields-describe)
+* [`sf kit object fields setup`](#sf-kit-object-fields-setup)
+* [`sf kit script`](#sf-kit-script)
+* [`sf kit script execute`](#sf-kit-script-execute)
 
 ## `sf kit data bulk delete`
 
@@ -115,9 +112,9 @@ EXAMPLES
 
     $ sf kit data bulk insert -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-  Insert MyObject\_\_c records with convert.js:
+  Insert MyObject__c records with convert.js:
 
-    $ sf kit data bulk insert -o MyObject**c -f ./path/to/MyObject**c.csv -c ./path/to/convert.js -w 10
+    $ sf kit data bulk insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
 ## `sf kit data bulk query`
@@ -187,9 +184,9 @@ EXAMPLES
 
     $ sf kit data bulk update -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-  Update MyObject\_\_c records with convert.js:
+  Update MyObject__c records with convert.js:
 
-    $ sf kit data bulk update -o MyObject**c -f ./path/to/MyObject**c.csv -c ./path/to/convert.js -w 10
+    $ sf kit data bulk update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
 ## `sf kit data bulk upsert`
@@ -237,10 +234,10 @@ EXAMPLES
 
     $ sf kit data bulk upsert -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-  Upsert MyObject\_\_c with convert.js and external ID
+  Upsert MyObject__c with convert.js and external ID
 
-    $ sf kit data bulk upsert -o MyObject**c -f ./path/to/MyObject**c.csv -c ./path/to/convert.js -i \
-      MyExternalId\_\_c -w 10
+    $ sf kit data bulk upsert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -i MyExternalId__c \
+      -w 10
 ```
 
 ## `sf kit data csv convert`
@@ -364,9 +361,9 @@ EXAMPLES
 
     $ sf kit object fields describe -s Account -f path/to/account_fields.csv
 
-  Output CustomObject\_\_c fields of the specified org as JSON format:
+  Output CustomObject__c fields of the specified org as JSON format:
 
-    $ sf kit object fields describe -o me@my.org -s CustomObject\_\_c --json
+    $ sf kit object fields describe -o me@my.org -s CustomObject__c --json
 ```
 
 ## `sf kit object fields setup`
@@ -393,9 +390,9 @@ EXAMPLES
 
     $ sf kit object fields setup -s Account -f path/to/account_fields.csv
 
-  Upsert and delete CustomObject\_\_c fields to the specified org:
+  Upsert and delete CustomObject__c fields to the specified org:
 
-    $ sf kit object fields setup -o me@my.org -s CustomObject\_\_c -f path/to/custom_object_fields.csv --delete
+    $ sf kit object fields setup -o me@my.org -s CustomObject__c -f path/to/custom_object_fields.csv --delete
 ```
 
 ## `sf kit script`
@@ -431,14 +428,16 @@ EXAMPLES
 
     $ sf kit script -f ./path/to/script.js
 
+  Execute from js file with arguments:
+
+    $ sf kit script -f ./path/to/script.js -- --opt1 val1 --opt2 val2 arg1 arg2
+
   Execute in REPL mode:
 
     $ sf kit script -o target-org
 
   query a account from org in REPL
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
-  Top level await is not enabled by default in REPL before Node.js v16
-  $ NODE_OPTIONS=--experimental-repl-await sf kit script
 ```
 
 ## `sf kit script execute`
@@ -474,14 +473,15 @@ EXAMPLES
 
     $ sf kit script execute -f ./path/to/script.js
 
+  Execute from js file with arguments:
+
+    $ sf kit script execute -f ./path/to/script.js -- --opt1 val1 --opt2 val2 arg1 arg2
+
   Execute in REPL mode:
 
     $ sf kit script execute -o target-org
 
   query a account from org in REPL
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
-  Top level await is not enabled by default in REPL before Node.js v16
-  $ NODE_OPTIONS=--experimental-repl-await sf kit script execute
 ```
-
 <!-- commandsstop -->
