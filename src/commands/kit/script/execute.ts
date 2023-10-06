@@ -4,6 +4,7 @@ import { Messages } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
+  StandardColors,
   optionalOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import * as fs from 'fs-extra';
@@ -48,12 +49,29 @@ export default class ScriptExecute extends SfCommand<void> {
       const script = fs.readFileSync(flags.file).toString('utf8');
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      await new asyncFunction('require', 'argv', 'context', 'conn', script)(
-        createLoader(path.dirname(flags.file)),
-        yargs([]).parse(argv as string[]),
-        this,
-        conn
+      const func = new asyncFunction(
+        'require',
+        'argv',
+        'context',
+        'conn',
+        script
       );
+      try {
+        await func(
+          createLoader(path.dirname(flags.file)),
+          yargs([]).parse(argv as string[]),
+          this,
+          conn
+        );
+      } catch (e) {
+        const [message, first] = e.stack.split('\n');
+        const m = first.match(/<anonymous>:(\d+):(\d+)/);
+        const code = func.toString().split('\n')[m[1] - 1];
+        this.log(StandardColors.error(`at line ${m[1] - 2}: ${message}`));
+        this.log(code);
+        this.log(StandardColors.error(' '.repeat(m[2] - 1) + '^'));
+        throw e;
+      }
       return;
     } else {
       this.log(messages.getMessage('repl.start'));

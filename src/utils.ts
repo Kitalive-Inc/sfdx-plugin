@@ -81,8 +81,13 @@ export type Converter = {
   finish?: (rows: JsonMap[], context: Command) => JsonMap[];
 };
 export function loadScript(file: string): Converter {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const script = require(path.resolve(file)) as Converter;
+  let script: Converter;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    script = require(path.resolve(file)) as Converter;
+  } catch (e) {
+    throw new Error(e.stack);
+  }
   if (!script.convert) throw new Error('function convert is not exported');
   return script;
 }
