@@ -1,4 +1,4 @@
-import * as path from 'path';
+import * as path from 'node:path';
 import { Connection, Messages, SfError } from '@salesforce/core';
 import {
   Flags,

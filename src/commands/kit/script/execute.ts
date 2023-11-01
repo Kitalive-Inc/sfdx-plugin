@@ -1,5 +1,5 @@
-import * as path from 'path';
-import * as repl from 'repl';
+import * as path from 'node:path';
+import * as repl from 'node:repl';
 import { Messages } from '@salesforce/core';
 import {
   Flags,

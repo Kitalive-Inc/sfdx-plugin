@@ -1,5 +1,5 @@
-import * as path from 'path';
-import { pipeline } from 'stream';
+import * as path from 'node:path';
+import { pipeline } from 'node:stream';
 import { Command } from '@oclif/core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
