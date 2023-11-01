@@ -17,7 +17,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
 running command...
 $ sf (--version)
-@kitalive/sfdx-plugin/0.5.2 darwin-arm64 node-v18.15.0
+@kitalive/sfdx-plugin/0.5.3 darwin-arm64 node-v18.15.0
 $ sf --help [COMMAND]
 USAGE
   $ sf COMMAND
