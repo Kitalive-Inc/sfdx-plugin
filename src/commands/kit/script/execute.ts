@@ -64,12 +64,14 @@ export default class ScriptExecute extends SfCommand<void> {
           conn
         );
       } catch (e) {
-        const [message, first] = e.stack.split('\n');
-        const m = first.match(/<anonymous>:(\d+):(\d+)/);
-        const code = func.toString().split('\n')[m[1] - 1];
-        this.log(StandardColors.error(`at line ${m[1] - 2}: ${message}`));
-        this.log(code);
-        this.log(StandardColors.error(' '.repeat(m[2] - 1) + '^'));
+        const message = e.stack.split('\n')[0];
+        const m = e.stack.match(/<anonymous>:(\d+):(\d+)/);
+        if (m) {
+          const code = func.toString().split('\n')[m[1] - 1];
+          this.log(StandardColors.error(`at line ${m[1] - 2}: ${message}`));
+          this.log(code);
+          this.log(StandardColors.error(' '.repeat(m[2] - 1) + '^'));
+        }
         throw e;
       }
       return;
