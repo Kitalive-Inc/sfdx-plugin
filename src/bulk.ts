@@ -1,6 +1,7 @@
 /* eslint-disable */
 import * as path from 'path';
 import { Messages, Org } from '@salesforce/core';
+import { Duration } from '@salesforce/kit';
 import {
   Flags,
   SfCommand,
@@ -36,15 +37,19 @@ export type BulkResult = {
   errors?: JsonMap[];
 };
 
-export function bulkQuery(conn: Connection, query: string): Promise<JsonMap[]> {
-  return new Promise((resolve, reject) => {
-    const records = [];
-    conn.bulk
-      .query(query)
-      .on('error', reject)
-      .on('record', (record) => records.push(record))
-      .on('end', () => resolve(records));
-  });
+export type QueryOptions = {
+  all?: boolean;
+  wait?: number;
+};
+
+export function bulkQuery(
+  conn: Connection,
+  query: string,
+  options?: QueryOptions
+): Promise<JsonMap[]> {
+  const wait = options?.wait ?? 5;
+  conn.bulk2.pollTimeout = Duration.minutes(wait).milliseconds;
+  return conn.bulk2.query(query, options?.all ? { scanAll: true } : {});
 }
 
 export function bulkLoad(

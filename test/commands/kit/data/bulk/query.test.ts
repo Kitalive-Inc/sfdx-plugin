@@ -53,4 +53,18 @@ describe('kit data bulk query', () => {
       expect(spinner.stop.args[0][0]).to.eq('error');
     }
   });
+
+  it('options', async () => {
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-q',
+      validQuery,
+      '-w',
+      '10',
+      '--all',
+    ]);
+    expect(bulkQuery.args[0][2]).to.eql({ all: true, wait: 10 });
+    expect(spinner.stop.args[0][0]).to.eq('1 records');
+  });
 });

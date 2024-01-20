@@ -30,6 +30,14 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       char: 'f',
       summary: messages.getMessage('flags.csvfile.summary'),
     }),
+    all: Flags.boolean({
+      summary: messages.getMessage('flags.all.summary'),
+    }),
+    wait: Flags.integer({
+      char: 'w',
+      summary: messages.getMessage('flags.wait.summary'),
+      default: 5,
+    }),
     'target-org': requiredOrgFlagWithDeprecations,
     'api-version': Flags.orgApiVersion(),
   };
@@ -41,7 +49,10 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
 
     this.spinner.start('Bulk query');
     try {
-      const rows = await this.bulkQuery(conn, flags.query);
+      const rows = await this.bulkQuery(conn, flags.query, {
+        all: flags.all,
+        wait: flags.wait,
+      });
       if (!rows.length) {
         this.spinner.stop('no records');
         return rows;
@@ -66,7 +77,7 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     write(rows, { headers: true, writeBOM: true }).pipe(stream);
   }
 
-  private bulkQuery(conn, query) {
-    return bulkQuery(conn, query);
+  private bulkQuery(conn, query, options) {
+    return bulkQuery(conn, query, options);
   }
 }
