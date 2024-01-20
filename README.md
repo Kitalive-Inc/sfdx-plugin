@@ -17,7 +17,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
 running command...
 $ sf (--version)
-@kitalive/sfdx-plugin/0.5.4 darwin-arm64 node-v20.10.0
+@kitalive/sfdx-plugin/0.6.0 darwin-arm64 node-v18.16.0
 $ sf --help [COMMAND]
 USAGE
   $ sf COMMAND
@@ -47,11 +47,12 @@ Bulk delete records by SOQL select query.
 
 ```
 USAGE
-  $ sf kit data bulk delete -q <value> -o <value> [--json] [--hard] [--concurrencymode <value>] [-s <value>] [-w <value>]
+  $ sf kit data bulk delete -q <value> -o <value> [--hard] [--concurrencymode <value>] [-s <value>] [-w <value>]
     [--api-version <value>]
 
 FLAGS
-  -o, --target-org=<value>   (required) Username or alias of the target org.
+  -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
+                             configuration variable is already set.
   -q, --query=<value>        (required) SOQL query to delete
   -s, --batchsize=<value>    [default: 10000] The batch size of the job
   -w, --wait=<value>         The number of minutes to wait for the command to complete before displaying the results
@@ -59,16 +60,13 @@ FLAGS
   --concurrencymode=<value>  [default: Parallel] The concurrency mode (Parallel or Serial) for the job
   --hard                     Perform a hard delete
 
-GLOBAL FLAGS
-  --json  Format output as json.
-
 EXAMPLES
   Delete Opportunity records with CloseDate older than 2 years:
 
     $ sf kit data bulk delete -q "SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:2"
 ```
 
-_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/bulk/delete.ts)_
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/bulk/delete.ts)_
 
 ## `sf kit data bulk insert`
 
@@ -76,7 +74,7 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk insert -s <value> -f <value> -o <value> [--json] [-r <value>] [-e <value>] [-d <value>] [-q <value>]
+  $ sf kit data bulk insert -s <value> -f <value> -o <value> [-r <value>] [-e <value>] [-d <value>] [-q <value>]
     [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode <value>]
     [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
@@ -86,7 +84,8 @@ FLAGS
   -e, --encoding=<value>      [default: utf8] The input CSV file encoding
   -f, --csvfile=<value>       (required) The CSV file path that defines the records to insert
   -m, --mapping=<value>       The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>    (required) Username or alias of the target org.
+  -o, --target-org=<value>    (required) Username or alias of the target org. Not required if the `target-org`
+                              configuration variable is already set.
   -q, --quote=<value>         [default: "] The input CSV file quote character
   -r, --resultfile=<value>    The CSV file path for writing the insert results
   -s, --sobject=<value>       (required) The SObject name to insert
@@ -100,9 +99,6 @@ FLAGS
                               ignored)
   --skiplines=<value>         The number of lines to skip
   --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -119,7 +115,7 @@ EXAMPLES
     $ sf kit data bulk insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/bulk/insert.ts)_
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/bulk/insert.ts)_
 
 ## `sf kit data bulk query`
 
@@ -127,16 +123,17 @@ Bulk query records.
 
 ```
 USAGE
-  $ sf kit data bulk query -q <value> -o <value> [--json] [-f <value>] [--api-version <value>]
+  $ sf kit data bulk query -q <value> -o <value> [-f <value>] [--all] [-w <value>] [--api-version <value>]
 
 FLAGS
   -f, --csvfile=<value>     [default: standard output] Output csv file
-  -o, --target-org=<value>  (required) Username or alias of the target org.
+  -o, --target-org=<value>  (required) Username or alias of the target org. Not required if the `target-org`
+                            configuration variable is already set.
   -q, --query=<value>       (required) SOQL query to export
+  -w, --wait=<value>        [default: 5] The number of minutes to wait for the command to complete before displaying the
+                            results
+  --all                     include deleted or archived records
   --api-version=<value>     Override the api version used for api requests made by this command
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 EXAMPLES
   Query Account records and save to specified path:
@@ -144,7 +141,7 @@ EXAMPLES
     $ sf kit data bulk query -q "SELECT Id, Name FROM Account" -f ./path/to/Account.csv
 ```
 
-_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/bulk/query.ts)_
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/bulk/query.ts)_
 
 ## `sf kit data bulk update`
 
@@ -152,7 +149,7 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk update -s <value> -f <value> -o <value> [--json] [-r <value>] [-e <value>] [-d <value>] [-q <value>]
+  $ sf kit data bulk update -s <value> -f <value> -o <value> [-r <value>] [-e <value>] [-d <value>] [-q <value>]
     [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode <value>]
     [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
@@ -162,7 +159,8 @@ FLAGS
   -e, --encoding=<value>      [default: utf8] The input CSV file encoding
   -f, --csvfile=<value>       (required) The CSV file path that defines the records to update
   -m, --mapping=<value>       The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>    (required) Username or alias of the target org.
+  -o, --target-org=<value>    (required) Username or alias of the target org. Not required if the `target-org`
+                              configuration variable is already set.
   -q, --quote=<value>         [default: "] The input CSV file quote character
   -r, --resultfile=<value>    The CSV file path for writing the update results
   -s, --sobject=<value>       (required) The SObject name to update
@@ -176,9 +174,6 @@ FLAGS
                               ignored)
   --skiplines=<value>         The number of lines to skip
   --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -195,7 +190,7 @@ EXAMPLES
     $ sf kit data bulk update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/bulk/update.ts)_
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/bulk/update.ts)_
 
 ## `sf kit data bulk upsert`
 
@@ -203,8 +198,8 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk upsert -s <value> -f <value> -o <value> -i <value> [--json] [-r <value>] [-e <value>] [-d <value>]
-    [-q <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode
+  $ sf kit data bulk upsert -s <value> -f <value> -o <value> -i <value> [-r <value>] [-e <value>] [-d <value>] [-q
+    <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly] [--concurrencymode
     <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
@@ -214,7 +209,8 @@ FLAGS
   -f, --csvfile=<value>       (required) The CSV file path that defines the records to upsert
   -i, --externalid=<value>    (required) [default: Id] The column name of the external ID
   -m, --mapping=<value>       The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>    (required) Username or alias of the target org.
+  -o, --target-org=<value>    (required) Username or alias of the target org. Not required if the `target-org`
+                              configuration variable is already set.
   -q, --quote=<value>         [default: "] The input CSV file quote character
   -r, --resultfile=<value>    The CSV file path for writing the upsert results
   -s, --sobject=<value>       (required) The SObject name to upsert
@@ -228,9 +224,6 @@ FLAGS
                               ignored)
   --skiplines=<value>         The number of lines to skip
   --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -248,7 +241,7 @@ EXAMPLES
       -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sf kit data csv convert`
 
@@ -256,8 +249,8 @@ Convert CSV data using column mapping file or Node.js script.
 
 ```
 USAGE
-  $ sf kit data csv convert [--json] [-i <value>] [-o <value>] [-e <value>] [-d <value>] [-q <value>] [--skiplines
-    <value>] [--trim] [-m <value>] [-c <value>]
+  $ sf kit data csv convert [-i <value>] [-o <value>] [-e <value>] [-d <value>] [-q <value>] [--skiplines <value>]
+    [--trim] [-m <value>] [-c <value>]
 
 FLAGS
   -c, --converter=<value>  The path of the script to convert CSV rows
@@ -270,9 +263,6 @@ FLAGS
   --skiplines=<value>      The number of lines to skip
   --trim                   Trim all white space from columns
 
-GLOBAL FLAGS
-  --json  Format output as json.
-
 EXAMPLES
   Convert csv file using mapping file and output to standard output:
 
@@ -283,7 +273,7 @@ EXAMPLES
     $ sf kit data csv convert -i ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/data/csv/convert.ts)_
 
 ## `sf kit layout assignments deploy`
 
@@ -291,16 +281,14 @@ Deploy page layout assignments from JSON file.
 
 ```
 USAGE
-  $ sf kit layout assignments deploy -f <value> -o <value> [--json] [--api-version <value>]
+  $ sf kit layout assignments deploy -f <value> -o <value> [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        (required) [default: config/layout-assignments.json] Input file path of page layout
                             assignment settings.
-  -o, --target-org=<value>  (required) Username or alias of the target org.
+  -o, --target-org=<value>  (required) Username or alias of the target org. Not required if the `target-org`
+                            configuration variable is already set.
   --api-version=<value>     Override the api version used for api requests made by this command
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 EXAMPLES
   Deploy from the default file path to the default org:
@@ -316,7 +304,7 @@ EXAMPLES
     $ sf kit layout assignments deploy -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sf kit layout assignments retrieve`
 
@@ -324,20 +312,17 @@ Retrieve page layout assignments and save to JSON file.
 
 ```
 USAGE
-  $ sf kit layout assignments retrieve -f <value> -o <value> [--json] [-p <value>] [-s <value>] [--merge] [--api-version
-  <value>]
+  $ sf kit layout assignments retrieve -f <value> -o <value> [-p <value>] [-s <value>] [--merge] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        (required) [default: config/layout-assignments.json] Output file path of page layout
                             assignment settings.
-  -o, --target-org=<value>  (required) Username or alias of the target org.
+  -o, --target-org=<value>  (required) Username or alias of the target org. Not required if the `target-org`
+                            configuration variable is already set.
   -p, --profile=<value>...  [default: all profiles] Profile names to retrieve
   -s, --sobject=<value>...  [default: sobjects which have multiple layouts] SObject names to retrieve
   --api-version=<value>     Override the api version used for api requests made by this command
   --merge                   Merge retrieved configurations with existing file.
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 EXAMPLES
   Retrieve page layout assignments from the default org and save to the default path:
@@ -353,7 +338,7 @@ EXAMPLES
     $ sf kit layout assignments retrieve -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sf kit object fields describe`
 
@@ -361,16 +346,14 @@ Describe sobject fields information.
 
 ```
 USAGE
-  $ sf kit object fields describe -s <value> -o <value> [--json] [-f <value>] [--api-version <value>]
+  $ sf kit object fields describe -s <value> -o <value> [-f <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        Output csv file path
-  -o, --target-org=<value>  (required) Username or alias of the target org.
+  -o, --target-org=<value>  (required) Username or alias of the target org. Not required if the `target-org`
+                            configuration variable is already set.
   -s, --sobject=<value>     (required) SObject name to describe
   --api-version=<value>     Override the api version used for api requests made by this command
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 EXAMPLES
   Describe Account fields of the default org and save to csv file:
@@ -382,7 +365,7 @@ EXAMPLES
     $ sf kit object fields describe -o me@my.org -s CustomObject__c --json
 ```
 
-_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/object/fields/describe.ts)_
+_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/object/fields/describe.ts)_
 
 ## `sf kit object fields setup`
 
@@ -390,18 +373,16 @@ Upsert and delete sobject fields from a CSV file.
 
 ```
 USAGE
-  $ sf kit object fields setup -s <value> -f <value> -o <value> [--json] [--delete] [--force] [--api-version <value>]
+  $ sf kit object fields setup -s <value> -f <value> -o <value> [--delete] [--force] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        (required) Input csv file path
-  -o, --target-org=<value>  (required) Username or alias of the target org.
+  -o, --target-org=<value>  (required) Username or alias of the target org. Not required if the `target-org`
+                            configuration variable is already set.
   -s, --sobject=<value>     (required) SObject name to setup
   --api-version=<value>     Override the api version used for api requests made by this command
   --delete                  Delete fields that are not in the csv file
   --force                   Do not confirm when deleting
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 EXAMPLES
   Upsert Account fields to the default org:
@@ -413,7 +394,7 @@ EXAMPLES
     $ sf kit object fields setup -o me@my.org -s CustomObject__c -f path/to/custom_object_fields.csv --delete
 ```
 
-_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/object/fields/setup.ts)_
+_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/object/fields/setup.ts)_
 
 ## `sf kit script`
 
@@ -421,15 +402,12 @@ Execute Node.js scripts in SfCommand context.
 
 ```
 USAGE
-  $ sf kit script [--json] [-f <value>] [-o <value>] [--api-version <value>]
+  $ sf kit script [-f <value>] [-o <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        The path of the Node.js script file to execute.
   -o, --target-org=<value>
   --api-version=<value>     Override the api version used for api requests made by this command
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 DESCRIPTION
   Execute Node.js scripts in SfCommand context.
@@ -466,15 +444,12 @@ Execute Node.js scripts in SfCommand context.
 
 ```
 USAGE
-  $ sf kit script execute [--json] [-f <value>] [-o <value>] [--api-version <value>]
+  $ sf kit script execute [-f <value>] [-o <value>] [--api-version <value>]
 
 FLAGS
   -f, --file=<value>        The path of the Node.js script file to execute.
   -o, --target-org=<value>
   --api-version=<value>     Override the api version used for api requests made by this command
-
-GLOBAL FLAGS
-  --json  Format output as json.
 
 DESCRIPTION
   Execute Node.js scripts in SfCommand context.
@@ -505,5 +480,5 @@ EXAMPLES
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.5.4/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v0.6.0/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
