@@ -190,11 +190,15 @@ export const createBulkCommand = (operation: IngestOperation) =>
     };
 
     public org: Org;
+    public conn: Connection;
+    public flags: JsonMap;
 
     public async run(): Promise<BulkResult> {
       const { flags } = await this.parse();
       this.org = flags['target-org'];
       const conn = this.org.getConnection(flags['api-version']);
+      this.conn = conn;
+      this.flags = flags;
       const {
         sobject,
         csvfile,
@@ -239,7 +243,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
 
         if (flags.convertonly) {
           const base = path.basename(csvfile, path.extname(csvfile));
-          this.saveCsv(
+          await this.saveCsv(
             path.join(path.dirname(csvfile), base + '.converted.csv'),
             rows
           );
@@ -291,7 +295,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
           );
         }
 
-        if (flags.resultfile) this.saveCsv(flags.resultfile, rows);
+        if (flags.resultfile) await this.saveCsv(flags.resultfile, rows);
 
         return result;
       } catch (e) {
@@ -301,7 +305,7 @@ export const createBulkCommand = (operation: IngestOperation) =>
     }
 
     public async parseCsv(
-      input: NodeJS.ReadableStream,
+      input: string | NodeJS.ReadableStream,
       options?: {
         encoding?: string;
         delimiter?: string;
@@ -325,31 +329,43 @@ export const createBulkCommand = (operation: IngestOperation) =>
         setnull,
         fieldTypes,
       } = options ?? {};
-      return utils.parseCsv(input, {
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim,
-        mapping,
-        convert: (row) => {
-          const result = convert ? convert(row) : row;
-          if (!result) return;
-          if (fieldTypes) {
-            for (const key of Object.keys(result)) {
-              const converter = converters[fieldTypes[key]];
-              if (converter) result[key] = converter(result[key]);
+      return utils.parseCsv(
+        typeof input === 'string' ? fs.createReadStream(input) : input,
+        {
+          encoding,
+          delimiter,
+          quote,
+          skiplines,
+          trim,
+          mapping,
+          convert: (row) => {
+            const result = convert ? convert(row) : row;
+            if (!result) return;
+            if (fieldTypes) {
+              for (const key of Object.keys(result)) {
+                const converter = converters[fieldTypes[key]];
+                if (converter) result[key] = converter(result[key]);
+              }
             }
-          }
-          if (setnull) {
-            for (const key of Object.keys(result)) {
-              if (key.includes('.')) continue; // skip reference
-              if (result[key] == null || result[key] === '')
-                result[key] = '#N/A';
+            if (setnull) {
+              for (const key of Object.keys(result)) {
+                if (key.includes('.')) continue; // skip reference
+                if (result[key] == null || result[key] === '')
+                  result[key] = '#N/A';
+              }
             }
-          }
-          return result;
-        },
+            return result;
+          },
+        }
+      );
+    }
+
+    public async saveCsv(file, rows): Promise<void> {
+      return new Promise((resolve, reject) => {
+        csv
+          .writeToPath(file, rows, { headers: true, writeBOM: true })
+          .on('error', reject)
+          .on('finish', resolve);
       });
     }
 
@@ -361,10 +377,6 @@ export const createBulkCommand = (operation: IngestOperation) =>
       options?: BulkOptions
     ) {
       return bulkLoad(conn, sobject, op, rows, options);
-    }
-
-    private saveCsv(file, rows) {
-      csv.writeToPath(file, rows, { headers: true, writeBOM: true });
     }
 
     private async getFieldTypes(conn, sobject) {
