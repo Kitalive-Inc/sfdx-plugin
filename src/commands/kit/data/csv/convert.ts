@@ -2,7 +2,7 @@ import { Messages } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import { loadScript, parseCsv } from '../../../../utils';
 
 Messages.importMessagesDirectory(__dirname);

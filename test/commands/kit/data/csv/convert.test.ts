@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import { TestContext } from '@salesforce/core/lib/testSetup';
 import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/csv/convert';
 
 describe('kit data csv convert', () => {

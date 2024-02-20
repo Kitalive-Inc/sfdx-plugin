@@ -1,5 +1,5 @@
-import * as path from 'node:path';
-import * as repl from 'node:repl';
+import path from 'node:path';
+import repl from 'node:repl';
 import { Messages } from '@salesforce/core';
 import {
   Flags,
@@ -7,7 +7,7 @@ import {
   StandardColors,
   optionalOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import yargs from 'yargs';
 
 Messages.importMessagesDirectory(__dirname);

@@ -5,7 +5,7 @@ import {
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import * as csv from 'fast-csv';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import { getCustomFields } from '../../../../metadata';
 import { CustomField } from '../../../../types';
 

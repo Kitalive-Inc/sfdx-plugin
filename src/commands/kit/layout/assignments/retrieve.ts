@@ -1,12 +1,12 @@
-import * as path from 'node:path';
+import path from 'node:path';
 import { Connection, Messages, SfError } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
-import * as glob from 'fast-glob';
-import * as fs from 'fs-extra';
+import glob from 'fast-glob';
+import fs from 'fs-extra';
 import {
   LayoutAssignment,
   LayoutAssignmentsPerProfile,

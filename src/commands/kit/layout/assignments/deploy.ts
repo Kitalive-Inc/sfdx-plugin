@@ -1,11 +1,11 @@
-import * as path from 'node:path';
+import path from 'node:path';
 import { Messages } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import { SaveResult } from 'jsforce/api/metadata';
 import { LayoutAssignmentsPerProfile } from '../../../../types';
 import { updateMetadata } from '../../../../metadata';

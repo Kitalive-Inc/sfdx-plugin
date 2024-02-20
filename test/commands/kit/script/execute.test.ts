@@ -1,10 +1,10 @@
-import * as repl from 'repl';
+import repl from 'repl';
 import { Connection } from '@salesforce/core';
 import { TestContext } from '@salesforce/core/lib/testSetup';
 import { stubSfCommandUx } from '@salesforce/sf-plugins-core';
 import { stubMethod } from '@salesforce/ts-sinon';
 import { expect } from 'chai';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import { spy } from 'sinon';
 import Command from '../../../../src/commands/kit/script/execute';
 

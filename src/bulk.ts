@@ -1,5 +1,5 @@
 /* eslint-disable */
-import * as path from 'path';
+import path from 'path';
 import { Messages, Org } from '@salesforce/core';
 import { Duration } from '@salesforce/kit';
 import {
@@ -8,9 +8,9 @@ import {
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import * as csv from 'fast-csv';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import { Connection } from 'jsforce';
 import {
   BatchInfo,

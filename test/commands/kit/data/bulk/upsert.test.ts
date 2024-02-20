@@ -3,7 +3,7 @@ import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
 import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import Command from '../../../../../src/commands/kit/data/bulk/upsert';
 import * as utils from '../../../../../src/utils';
 

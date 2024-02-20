@@ -5,7 +5,7 @@ import {
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 import {
   upsertMetadata,
   deleteMetadata,

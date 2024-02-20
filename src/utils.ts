@@ -1,4 +1,4 @@
-import * as path from 'node:path';
+import path from 'node:path';
 import { pipeline } from 'node:stream';
 import { Command } from '@oclif/core';
 import { JsonMap } from '@salesforce/ts-types';
