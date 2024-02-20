@@ -57,7 +57,8 @@
   "files": [
     "/lib",
     "/messages",
-    "/oclif.manifest.json"
+    "/oclif.manifest.json",
+    "/public"
   ],
   "homepage": "https://github.com/Kitalive-Inc/sfdx-plugin",
   "keywords": [
