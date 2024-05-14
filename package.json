@@ -1,7 +1,7 @@
 {
   "name": "@kitalive/sfdx-plugin",
   "description": "Kitalive SFDX plugin",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "author": "Akihiro Ono",
   "bugs": "https://github.com/Kitalive-Inc/sfdx-plugin/issues",
   "dependencies": {
