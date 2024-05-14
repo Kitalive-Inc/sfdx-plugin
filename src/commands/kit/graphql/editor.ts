@@ -46,7 +46,7 @@ export default class GraphqlEditor extends SfCommand<void> {
     });
   }
 
-  public exit(code = 0) {
+  public exit(code = 0): never {
     if (code === 130) {
       process.exit(0);
     } else {
