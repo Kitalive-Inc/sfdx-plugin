@@ -37,11 +37,20 @@ export default class GraphqlEditor extends SfCommand<void> {
     app.post('/graphql', async (req, res) => {
       res.json(await conn.requestPost(endpoint, req.body));
     });
+    app.post('/quit', () => process.exit(0));
 
-    app.listen(flags.port, async () => {
+    app.listen(flags.port, '127.0.0.1', async () => {
       this.log(`Listening on port ${flags.port}`);
       this.log('Use Ctrl-C to stop');
       await open(`http://localhost:${flags.port}`);
     });
+  }
+
+  public exit(code = 0) {
+    if (code === 130) {
+      process.exit(0);
+    } else {
+      super.exit(code);
+    }
   }
 }

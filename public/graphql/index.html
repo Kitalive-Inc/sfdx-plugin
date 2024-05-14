@@ -74,6 +74,9 @@
           plugins: [explorerPlugin],
         })
       );
+      window.addEventListener('beforeunload', () =>
+        navigator.sendBeacon('/quit')
+      );
     </script>
   </body>
 </html>
