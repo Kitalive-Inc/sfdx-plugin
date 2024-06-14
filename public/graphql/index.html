@@ -64,7 +64,7 @@
     <div id="graphiql">Loading...</div>
     <script crossorigin>
       const root = ReactDOM.createRoot(document.getElementById('graphiql'));
-      const fetcher = GraphiQL.createFetcher({ url: '/graphql' });
+      const fetcher = GraphiQL.createFetcher({ url: '/api/graphql' });
       const explorerPlugin = GraphiQLPluginExplorer.explorerPlugin();
       root.render(
         React.createElement(GraphiQL, {

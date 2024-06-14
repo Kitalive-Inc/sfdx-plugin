@@ -1,8 +1,5 @@
-import express from 'express';
-import open from 'open';
-
-import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
+import { ServerCommand } from '../../../server';
 
 Messages.importMessagesDirectory(__dirname);
 const messages = Messages.loadMessages(
@@ -10,47 +7,28 @@ const messages = Messages.loadMessages(
   'graphql.editor'
 );
 
-export default class GraphqlEditor extends SfCommand<void> {
+export default class GraphqlEditor extends ServerCommand {
   public static readonly summary = messages.getMessage('summary');
   public static readonly description = messages.getMessage('description');
   public static readonly examples = messages.getMessages('examples');
 
-  public static readonly flags = {
-    port: Flags.integer({
-      summary: messages.getMessage('flags.port.summary'),
-      char: 'p',
-      default: 3000,
-    }),
-    'target-org': Flags.requiredOrg(),
-    'api-version': Flags.orgApiVersion(),
-  };
+  public static readonly flags = ServerCommand.flags;
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(GraphqlEditor);
     const conn = flags['target-org']!.getConnection(flags['api-version']);
 
     const endpoint = `/services/data/v${conn.version}/graphql`;
-    const app = express();
-    app.use(express.static(__dirname + '/../../../../public/graphql'));
-    app.use(express.json());
+    this.serve(flags.port, (app) => {
+      app.get('/', (req, res) => {
+        res.sendFile('index.html', {
+          root: __dirname + '/../../../../public/graphql',
+        });
+      });
 
-    app.post('/graphql', async (req, res) => {
-      res.json(await conn.requestPost(endpoint, req.body));
+      app.post('/api/graphql', async (req, res) => {
+        res.json(await conn.requestPost(endpoint, req.body));
+      });
     });
-    app.post('/quit', () => process.exit(0));
-
-    app.listen(flags.port, '127.0.0.1', async () => {
-      this.log(`Listening on port ${flags.port}`);
-      this.log('Use Ctrl-C to stop');
-      await open(`http://localhost:${flags.port}`);
-    });
-  }
-
-  public exit(code = 0): never {
-    if (code === 130) {
-      process.exit(0);
-    } else {
-      super.exit(code);
-    }
   }
 }

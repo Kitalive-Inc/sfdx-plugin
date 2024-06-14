@@ -11,6 +11,7 @@
     "@salesforce/sf-plugins-core": "^5",
     "dayjs": "^1.11.9",
     "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
     "fast-csv": "^4.3.6",
     "fs-extra": "^11.1.1",
     "iconv-lite": "^0.6.3",
@@ -83,6 +84,7 @@
   "repository": "Kitalive-Inc/sfdx-plugin",
   "scripts": {
     "build": "wireit",
+    "build:vuetify": "cd vuetify && yarn && yarn build",
     "clean": "sf-clean",
     "clean-all": "sf-clean all",
     "clean:lib": "shx rm -rf lib && shx rm -rf coverage && shx rm -rf .nyc_output && shx rm -f oclif.manifest.json",
@@ -102,7 +104,8 @@
     "build": {
       "dependencies": [
         "compile",
-        "lint"
+        "lint",
+        "build:vuetify"
       ]
     },
     "compile": {
