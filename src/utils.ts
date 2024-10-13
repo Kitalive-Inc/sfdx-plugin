@@ -1,9 +1,14 @@
 import path from 'node:path';
 import { pipeline } from 'node:stream';
+import { fileURLToPath } from 'node:url';
 import { Command } from '@oclif/core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
-import { decodeStream } from 'iconv-lite';
+import iconv from 'iconv-lite';
+
+export function getScriptDir(url: string) {
+  return path.dirname(fileURLToPath(url));
+}
 
 export function chunk<T>(array: T[], size: number): T[][] {
   const result: T[][] = [];
@@ -41,7 +46,7 @@ export function parseCsv(
     const mapper = mapping ? columnMapper(mapping) : undefined;
 
     let lines = 2;
-    const rows = [];
+    const rows: JsonMap[] = [];
     const parser = csv
       .parse({
         headers: true,
@@ -54,8 +59,8 @@ export function parseCsv(
       .on('data', (row: JsonMap) => {
         try {
           if (mapper) row = mapper(row);
-          if (convert) row = convert(row);
-          if (row) rows.push(row);
+          const r = convert ? convert(row) : row;
+          if (r) rows.push(r);
           lines++;
         } catch (e) {
           throw new Error(
@@ -66,11 +71,11 @@ export function parseCsv(
         }
       });
 
-    const callback = (e): void => (e ? reject(e) : resolve(rows));
+    const callback = (e: unknown): void => (e ? reject(e) : resolve(rows));
     if (!encoding || encoding === 'utf8') {
       pipeline(input, parser, callback);
     } else {
-      pipeline(input, decodeStream(encoding), parser, callback);
+      pipeline(input, iconv.decodeStream(encoding), parser, callback);
     }
   });
 }
@@ -80,13 +85,12 @@ export type Converter = {
   convert: (row: JsonMap) => JsonMap;
   finish?: (rows: JsonMap[], context: Command) => JsonMap[];
 };
-export function loadScript(file: string): Converter {
+export async function loadScript(file: string): Promise<Converter> {
   let script: Converter;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    script = require(path.resolve(file)) as Converter;
-  } catch (e) {
-    throw new Error(e.stack);
+    script = (await import(path.resolve(file))) as Converter;
+  } catch (e: unknown) {
+    throw new Error((e as Error).stack);
   }
   if (!script.convert) throw new Error('function convert is not exported');
   return script;
@@ -95,7 +99,7 @@ export function loadScript(file: string): Converter {
 export function columnMapper(mapping: JsonMap): (row: JsonMap) => JsonMap {
   const keys = Object.keys(mapping);
   return (row: JsonMap) => {
-    const result = {};
+    const result: JsonMap = {};
     for (const to of keys) {
       const from = mapping[to] as string;
       if (!(from in row)) throw new Error(`The column '${from}' is not found`);

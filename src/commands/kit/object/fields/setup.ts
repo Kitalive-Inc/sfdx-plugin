@@ -11,9 +11,9 @@ import {
   deleteMetadata,
   getCustomFieldMap,
   getOrgNamespace,
-} from '../../../../metadata';
-import { CustomField, CustomValue } from '../../../../types';
-import { parseCsv } from '../../../../utils';
+} from '../../../../metadata.js';
+import { CustomField, CustomValue, FilterItem } from '../../../../types.js';
+import { parseCsv } from '../../../../utils.js';
 
 type ResultType = 'created' | 'updated' | 'deleted' | 'identical' | 'error';
 type SetupResult = {
@@ -24,10 +24,15 @@ type SetupResult = {
 
 const deepCopy = <T>(object: T): T =>
   object && (JSON.parse(JSON.stringify(object)) as T);
-const deepEquals = (obj1, obj2) =>
-  JSON.stringify(obj1) === JSON.stringify(obj2);
+const deepEquals = (
+  obj1: JsonMap | null | undefined,
+  obj2: JsonMap | null | undefined
+) => JSON.stringify(obj1) === JSON.stringify(obj2);
 
-export function setFieldOptions(field, existingField) {
+export function setFieldOptions(
+  field: CustomField,
+  existingField?: CustomField
+) {
   for (const [key, value] of Object.entries(field)) {
     if (value === '') delete field[key];
   }
@@ -35,47 +40,44 @@ export function setFieldOptions(field, existingField) {
   if (field.formula && existingField?.formulaTreatBlanksAs != null)
     field.formulaTreatBlanksAs ??= existingField.formulaTreatBlanksAs;
 
-  const setDefault = (name, value) => {
-    if (field[name] === undefined) field[name] = existingField?.[name] ?? value;
-  };
-
   switch (field.type) {
     case 'AutoNumber':
       if (existingField?.displayFormat)
         field.displayFormat = existingField.displayFormat;
       break;
     case 'Checkbox':
-      if (!field.formula) setDefault('defaultValue', false);
+      if (!field.formula)
+        field.defaultValue ??= existingField?.defaultValue ?? 'false';
       break;
     case 'Currency':
     case 'Number':
     case 'Percent':
-      setDefault('precision', 18);
-      setDefault('scale', 0);
+      field.precision ??= existingField?.precision ?? 18;
+      field.scale ??= existingField?.scale ?? 0;
       break;
     case 'Text':
-      if (!field.formula) setDefault('length', 255);
+      if (!field.formula) field.length ??= existingField?.length ?? 255;
       break;
     case 'EncryptedText':
-      setDefault('length', 175);
-      setDefault('maskChar', 'asterisk');
-      setDefault('maskType', 'all');
+      field.length ??= existingField?.length ?? 175;
+      field.maskChar ??= existingField?.maskChar ?? 'asterisk';
+      field.maskType ??= existingField?.maskType ?? 'all';
       break;
     case 'LongTextArea':
     case 'Html':
-      setDefault('length', 32768);
-      setDefault('visibleLines', 10);
+      field.length ??= existingField?.length ?? 32_768;
+      field.visibleLines ??= existingField?.visibleLines ?? 10;
       break;
     case 'Location':
       if (existingField)
         field.displayLocationInDecimal = existingField.displayLocationInDecimal;
-      setDefault('scale', 5);
+      field.scale ??= existingField?.scale ?? 5;
       break;
     case 'Picklist':
       setPicklistOptions(field, existingField);
       break;
     case 'MultiselectPicklist':
-      setDefault('visibleLines', 4);
+      field.visibleLines ??= existingField?.visibleLines ?? 4;
       setPicklistOptions(field, existingField);
       break;
     case 'MasterDetail':
@@ -97,10 +99,12 @@ export function setFieldOptions(field, existingField) {
           existingField.summaryFilterItems
         );
       break;
+    default:
+      break;
   }
 }
 
-function normalizeFilterItems(items: JsonMap[]): JsonMap[] {
+function normalizeFilterItems(items: FilterItem[]): FilterItem[] {
   return items.map((item) => {
     item = { ...item };
     if (item.value === null) delete item.value;
@@ -109,7 +113,7 @@ function normalizeFilterItems(items: JsonMap[]): JsonMap[] {
   });
 }
 
-function setReferenceOptions(field, existingField) {
+function setReferenceOptions(field: CustomField, existingField?: CustomField) {
   if (!existingField) return;
   if (existingField.relationshipLabel !== null)
     field.relationshipLabel = existingField.relationshipLabel;
@@ -130,12 +134,13 @@ function setReferenceOptions(field, existingField) {
   }
 }
 
-function setPicklistOptions(field, existingField) {
-  if (existingField && field.type !== existingField.type) existingField = null;
+function setPicklistOptions(field: CustomField, existingField?: CustomField) {
+  if (existingField && field.type !== existingField.type)
+    existingField = undefined;
   const { restricted, values, valueSetName } = field;
   if (values || valueSetName) {
     const valueSet = existingField
-      ? deepCopy(existingField.valueSet)
+      ? deepCopy(existingField.valueSet!)
       : { restricted: true };
     if (restricted !== undefined) valueSet.restricted = restricted;
     if (restricted === 'false' || valueSet.restricted === null)
@@ -168,7 +173,7 @@ function setPicklistOptions(field, existingField) {
         );
         for (const { valueName, label } of oldOptionMap.values()) {
           // detect API name changes and change label to avoid duplicate labels
-          if (newOptionMap.has(label))
+          if (newOptionMap.has(label!))
             options.push({ valueName, label: label + '_del', isActive: false });
         }
       }
@@ -189,7 +194,7 @@ function setPicklistOptions(field, existingField) {
   }
 }
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'object.fields.setup'
@@ -248,14 +253,12 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
 
     let deleteFields = flags.delete ? [...existingFieldMap.values()] : [];
     if (deleteFields.length && !flags.force) {
-      const prompt = await this.prompt({
-        type: 'confirm',
-        name: 'deleteFields',
+      const result = await this.confirm({
         message: `delete fields: ${deleteFields
           .map(({ fullName }) => fullName)
           .join(', ')}\nDo you want to delete the above fields? (y/n)`,
       });
-      if (!prompt.deleteFields) deleteFields = [];
+      if (!result) deleteFields = [];
     }
 
     const results: SetupResult[] = [];

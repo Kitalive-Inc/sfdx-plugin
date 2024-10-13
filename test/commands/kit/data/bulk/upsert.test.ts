@@ -1,16 +1,13 @@
 import { expect } from 'chai';
-import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import esmock from 'esmock';
+import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
-import fs from 'fs-extra';
-import Command from '../../../../../src/commands/kit/data/bulk/upsert';
-import * as utils from '../../../../../src/utils';
-
-const { Readable } = require('stream');
+import { Readable } from 'stream';
+import UpsertCommand from '../../../../../src/commands/kit/data/bulk/upsert.js';
 
 describe('.parseCsv', () => {
-  const subject = Command.prototype.parseCsv;
+  const subject = UpsertCommand.prototype.parseCsv;
 
   const csvRows = [
     { col1: 'col1_1', col2: 'col2_1', col3: 'col3_1' },
@@ -146,25 +143,47 @@ describe('kit data bulk upsert', () => {
   ];
 
   const fieldTypes = {};
+  const mapping = {};
+  let Command: any;
   let bulkLoad: any;
+  let createReadStream: any;
+  let readJson: any;
   let parseCsv: any;
   let saveCsv: any;
+  let loadScript: any;
+  let convert: any;
+  let start: any;
+  let finish: any;
   beforeEach(async () => {
     await $$.stubAuths(testOrg);
     stubSfCommandUx($$.SANDBOX);
     stubSpinner($$.SANDBOX);
-    stubMethod($$.SANDBOX, fs, 'createReadStream').returns(csv.write(csvRows));
-    bulkLoad = stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
+
+    createReadStream = $$.SANDBOX.fake.returns(csv.write(csvRows));
+    readJson = $$.SANDBOX.fake.returns(mapping);
+    convert = $$.SANDBOX.fake();
+    start = $$.SANDBOX.fake();
+    finish = $$.SANDBOX.fake();
+    loadScript = $$.SANDBOX.fake.returns({ convert, start, finish });
+    Command = await esmock(
+      '../../../../../src/commands/kit/data/bulk/upsert.js',
+      {
+        '../../../../../src/bulk.js': await esmock(
+          '../../../../../src/bulk.js',
+          {
+            'fs-extra': { createReadStream, readJson },
+            '../../../../../src/utils.js': { loadScript },
+          }
+        ),
+      }
+    );
+    bulkLoad = $$.SANDBOX.stub(Command.prototype, 'bulkLoad').resolves({
       job: {},
       records: [],
     });
-    stubMethod($$.SANDBOX, Command.prototype, 'getFieldTypes').returns(
-      fieldTypes
-    );
-    parseCsv = stubMethod($$.SANDBOX, Command.prototype, 'parseCsv').resolves(
-      csvRows
-    );
-    saveCsv = stubMethod($$.SANDBOX, Command.prototype, 'saveCsv');
+    $$.SANDBOX.stub(Command.prototype, 'getFieldTypes').returns(fieldTypes);
+    parseCsv = $$.SANDBOX.stub(Command.prototype, 'parseCsv').resolves(csvRows);
+    saveCsv = $$.SANDBOX.stub(Command.prototype, 'saveCsv');
   });
 
   const defaultArgs = [
@@ -177,7 +196,7 @@ describe('kit data bulk upsert', () => {
   ];
   it(defaultArgs.join(' '), async () => {
     await Command.run(defaultArgs);
-    expect(fs.createReadStream.calledWith('data/Contact.csv')).to.be.true;
+    expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
     expect(parseCsv.calledOnce).to.be.true;
     expect(parseCsv.args[0][1]).to.contain({
@@ -224,16 +243,9 @@ describe('kit data bulk upsert', () => {
     'path/to/resultfile.csv'
   );
   it(args.join(' '), async () => {
-    const mapping = {};
-    const convert = () => [];
-    stubMethod($$.SANDBOX, fs, 'readJson').resolves(mapping);
-    const loadScript = stubMethod($$.SANDBOX, utils, 'loadScript').returns({
-      convert,
-    });
-
     await Command.run(args);
 
-    expect(fs.readJson.calledWith('data/mappings.json')).to.be.true;
+    expect(readJson.calledWith('data/mappings.json')).to.be.true;
     expect(loadScript.calledWith('data/convert.js')).to.be.true;
     expect(parseCsv.calledOnce).to.be.true;
     expect(parseCsv.args[0][1]).to.eql({
@@ -264,14 +276,6 @@ describe('kit data bulk upsert', () => {
   });
 
   it('called converters hooks', async () => {
-    const convert = $$.SANDBOX.stub();
-    const start = $$.SANDBOX.stub();
-    const finish = $$.SANDBOX.stub();
-    stubMethod($$.SANDBOX, utils, 'loadScript').returns({
-      convert,
-      start,
-      finish,
-    });
     await Command.run(defaultArgs.concat('-c', 'data/converter.js'));
 
     expect(start.calledOnce).to.be.true;

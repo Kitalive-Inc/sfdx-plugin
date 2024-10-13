@@ -1,13 +1,10 @@
+import fs from 'node:fs';
 import { Messages } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
+import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
-import fs from 'fs-extra';
-import { getCustomFields } from '../../../../metadata';
-import { CustomField } from '../../../../types';
+import { getCustomFields } from '../../../../metadata.js';
+import { CustomField } from '../../../../types.js';
 
 const csvHeaders = [
   'label',
@@ -36,7 +33,7 @@ const csvHeaders = [
   'inlineHelpText',
 ];
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'object.fields.describe'
@@ -57,7 +54,7 @@ export default class FieldsDescribe extends SfCommand<CustomField[]> {
       char: 'f',
       summary: messages.getMessage('flags.file.summary'),
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 
@@ -91,7 +88,7 @@ export default class FieldsDescribe extends SfCommand<CustomField[]> {
     return results;
   }
 
-  private writeCsv(file, rows) {
+  public writeCsv(file: string | undefined, rows: JsonMap[]) {
     csv
       .write(rows, { headers: csvHeaders, writeBOM: true })
       .pipe(file ? fs.createWriteStream(file) : process.stdout);

@@ -1,14 +1,22 @@
-import { Messages } from '@salesforce/core';
+import { Connection, Messages } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
-import { composeQuery, getField, parseQuery } from 'soql-parser-js';
-import { bulkLoad, bulkQuery, BulkResult } from '../../../../bulk';
+import soqlParser from '@jetstreamapp/soql-parser-js';
+import { Record } from '@jsforce/jsforce-node';
+import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
+import {
+  bulkLoad,
+  bulkQuery,
+  BulkResult,
+  BulkOptions,
+} from '../../../../bulk.js';
+const { composeQuery, getField, parseQuery } = soqlParser;
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const bulkMessages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'data.bulk'
@@ -40,8 +48,8 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     batchsize: Flags.integer({
       char: 's',
       min: 1,
-      max: 10000,
-      default: 10000,
+      max: 10_000,
+      default: 10_000,
       summary: bulkMessages.getMessage('flags.batchsize.summary'),
     }),
     wait: Flags.integer({
@@ -70,11 +78,18 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       }
 
       const operation = flags.hard ? 'hardDelete' : 'delete';
-      const result = await this.bulkLoad(conn, query.sObject, operation, rows, {
-        concurrencyMode: flags.concurrencymode,
-        batchSize: flags.batchsize,
-        wait: flags.wait,
-      });
+      const result = await this.bulkLoad(
+        conn,
+        query.sObject!,
+        operation,
+        rows,
+        {
+          concurrencyMode: flags.concurrencymode,
+          batchSize: flags.batchsize,
+          wait: flags.wait,
+        }
+      );
+      if (!result) return;
 
       if (flags.wait) {
         const { numberRecordsProcessed, numberRecordsFailed } =
@@ -112,11 +127,17 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     }
   }
 
-  private bulkQuery(conn, query) {
+  public bulkQuery(conn: Connection, query: string) {
     return bulkQuery(conn, query);
   }
 
-  private bulkLoad(conn, sobject, operation, rows, options) {
+  public bulkLoad(
+    conn: Connection,
+    sobject: string,
+    operation: IngestOperation,
+    rows: Record[],
+    options?: BulkOptions
+  ) {
     return bulkLoad(conn, sobject, operation, rows, options);
   }
 }

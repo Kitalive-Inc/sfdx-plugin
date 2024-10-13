@@ -1,8 +1,9 @@
 import { expect } from 'chai';
-import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import { Record } from '@jsforce/jsforce-node';
+import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
-import Command from '../../../../../src/commands/kit/data/bulk/delete';
+import { BulkResult } from '../../../../../src/bulk.js';
+import Command from '../../../../../src/commands/kit/data/bulk/delete.js';
 
 describe('kit data bulk delete', () => {
   const $$ = new TestContext();
@@ -10,7 +11,7 @@ describe('kit data bulk delete', () => {
   const validQuery = 'SELECT Id FROM Account';
   const emptyQuery = 'SELECT Id FROM Contact';
   const invalidQuery = 'SELECT Id FROM Unknown';
-  const records = [{ Id: 'id1' }];
+  const records: Record[] = [{ Id: 'id1' }];
 
   let bulkQuery: any;
   let bulkLoad: any;
@@ -19,22 +20,20 @@ describe('kit data bulk delete', () => {
     await $$.stubAuths(testOrg);
     spinner = stubSpinner($$.SANDBOX);
     stubSfCommandUx($$.SANDBOX);
-    bulkQuery = stubMethod(
-      $$.SANDBOX,
-      Command.prototype,
-      'bulkQuery'
-    ).callsFake((conn, query) => {
-      switch (query) {
-        case validQuery:
-          return Promise.resolve(records);
-        case emptyQuery:
-          return Promise.resolve([]);
-        default:
-          return Promise.reject(new Error('error message'));
+    bulkQuery = $$.SANDBOX.stub(Command.prototype, 'bulkQuery').callsFake(
+      (conn, query) => {
+        switch (query) {
+          case validQuery:
+            return Promise.resolve(records);
+          case emptyQuery:
+            return Promise.resolve([]);
+          default:
+            return Promise.reject(new Error('error message'));
+        }
       }
-    });
-    bulkLoad = stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves(
-      {}
+    );
+    bulkLoad = $$.SANDBOX.stub(Command.prototype, 'bulkLoad').resolves(
+      {} as BulkResult
     );
   });
 

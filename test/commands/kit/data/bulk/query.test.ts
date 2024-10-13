@@ -1,8 +1,7 @@
 import { expect } from 'chai';
-import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSpinner } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
-import Command from '../../../../../src/commands/kit/data/bulk/query';
+import Command from '../../../../../src/commands/kit/data/bulk/query.js';
 
 describe('kit data bulk query', () => {
   const $$ = new TestContext();
@@ -16,20 +15,18 @@ describe('kit data bulk query', () => {
   beforeEach(async () => {
     await $$.stubAuths(testOrg);
     spinner = stubSpinner($$.SANDBOX);
-    bulkQuery = stubMethod(
-      $$.SANDBOX,
-      Command.prototype,
-      'bulkQuery'
-    ).callsFake((conn, query) => {
-      switch (query) {
-        case validQuery:
-          return Promise.resolve([{ Id: 'id1' }]);
-        case emptyQuery:
-          return Promise.resolve([]);
-        default:
-          return Promise.reject(new Error('error message'));
+    bulkQuery = $$.SANDBOX.stub(Command.prototype, 'bulkQuery').callsFake(
+      (conn, query) => {
+        switch (query) {
+          case validQuery:
+            return Promise.resolve([{ Id: 'id1' }]);
+          case emptyQuery:
+            return Promise.resolve([]);
+          default:
+            return Promise.reject(new Error('error message'));
+        }
       }
-    });
+    );
   });
 
   it('success', async () => {

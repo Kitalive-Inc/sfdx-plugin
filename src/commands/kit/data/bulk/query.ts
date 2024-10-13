@@ -1,15 +1,17 @@
 import fs from 'node:fs';
-import { Messages } from '@salesforce/core';
+import { Writable } from 'node:stream';
+import { Connection, Messages } from '@salesforce/core';
 import { write } from '@fast-csv/format';
+import { Record } from '@jsforce/jsforce-node';
 import {
   Flags,
   SfCommand,
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
-import { bulkQuery } from '../../../../bulk';
+import { bulkQuery, QueryOptions } from '../../../../bulk.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'data.bulk.query'
@@ -73,11 +75,11 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     }
   }
 
-  private writeCsv(rows, stream) {
+  public writeCsv(rows: Record[], stream: Writable) {
     write(rows, { headers: true, writeBOM: true }).pipe(stream);
   }
 
-  private bulkQuery(conn, query, options) {
+  public bulkQuery(conn: Connection, query: string, options: QueryOptions) {
     return bulkQuery(conn, query, options);
   }
 }

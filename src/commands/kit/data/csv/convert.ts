@@ -3,9 +3,9 @@ import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import fs from 'fs-extra';
-import { loadScript, parseCsv } from '../../../../utils';
+import { loadScript, parseCsv } from '../../../../utils.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'data.csv.convert'
@@ -66,7 +66,7 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     const mapping = flags.mapping
       ? await fs.readJson(flags.mapping)
       : undefined;
-    const convert = converter ? this.loadConverter(converter) : undefined;
+    const convert = converter ? await this.loadConverter(converter) : undefined;
 
     const input = flags.input
       ? fs.createReadStream(flags.input)
@@ -85,17 +85,13 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
       const output = flags.output
         ? fs.createWriteStream(flags.output)
         : process.stdout;
-      this.writeCsv(rows, output);
+      csv.writeToStream(output, rows, { headers: true });
     }
 
     return rows;
   }
 
-  private writeCsv(rows, stream) {
-    csv.writeToStream(stream, rows, { headers: true });
-  }
-
-  private loadConverter(file) {
-    return loadScript(file).convert;
+  private async loadConverter(file: string) {
+    return (await loadScript(file)).convert;
   }
 }

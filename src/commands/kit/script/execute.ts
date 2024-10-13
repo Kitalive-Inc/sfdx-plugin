@@ -1,16 +1,17 @@
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import repl from 'node:repl';
+import vm from 'node:vm';
 import { Messages } from '@salesforce/core';
 import {
   Flags,
   SfCommand,
-  StandardColors,
   optionalOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
-import fs from 'fs-extra';
 import yargs from 'yargs';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'script.execute'
@@ -37,49 +38,28 @@ export default class ScriptExecute extends SfCommand<void> {
   public async run(): Promise<void> {
     const { flags, argv } = await this.parse(ScriptExecute);
     const conn = flags['target-org']?.getConnection(flags['api-version']);
-    module.paths.push('./node_modules');
-    module.paths.push('.');
+    const require = createRequire(path.resolve(flags.file ?? './repl.js'));
 
-    const createLoader = (baseDir) => (name) => {
-      if (name.startsWith('.')) name = path.resolve(baseDir, name);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return require(name);
-    };
     if (flags.file) {
       const script = fs.readFileSync(flags.file).toString('utf8');
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const asyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-      const func = new asyncFunction(
-        'require',
-        'argv',
-        'context',
-        'conn',
-        script
-      );
-      try {
-        await func(
-          createLoader(path.dirname(flags.file)),
-          yargs([]).parse(argv as string[]),
-          this,
-          conn
-        );
-      } catch (e) {
-        const message = e.stack.split('\n')[0];
-        const m = e.stack.match(/<anonymous>:(\d+):(\d+)/);
-        if (m) {
-          const code = func.toString().split('\n')[m[1] - 1];
-          this.log(StandardColors.error(`at line ${m[1] - 2}: ${message}`));
-          this.log(code);
-          this.log(StandardColors.error(' '.repeat(m[2] - 1) + '^'));
-        }
-        throw e;
-      }
-      return;
+      const vmContext = vm.createContext({
+        require,
+        argv: yargs([]).parse(argv as string[]),
+        context: this,
+        conn,
+        console,
+      });
+      vm.runInContext('(async () => {\n' + script + '\n})();', vmContext, {
+        filename: flags.file,
+        lineOffset: -1,
+        // @ts-ignore
+        importModuleDynamically: vm.constants?.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+      });
     } else {
       this.log(messages.getMessage('repl.start'));
 
       const replServer = repl.start('> ');
-      replServer.context.require = createLoader('.');
+      replServer.context.require = require;
       replServer.context.context = this;
       replServer.context.conn = conn;
 

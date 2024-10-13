@@ -1,22 +1,11 @@
-import repl from 'repl';
 import { Connection } from '@salesforce/core';
-import { TestContext } from '@salesforce/core/lib/testSetup';
+import { TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
 import { expect } from 'chai';
-import fs from 'fs-extra';
-import { spy } from 'sinon';
-import Command from '../../../../src/commands/kit/script/execute';
+import esmock from 'esmock';
 
 describe('kit script execute', () => {
   const $$ = new TestContext();
-
-  const validateVariables = spy();
-
-  Object.assign(global, { validateVariables });
-  const script = `
-    validateVariables(conn, context);
-  `;
 
   beforeEach(async () => {
     stubSfCommandUx($$.SANDBOX);
@@ -24,24 +13,46 @@ describe('kit script execute', () => {
 
   const args = ['-o', 'test@foo.bar'];
   it('script mode', async () => {
-    stubMethod($$.SANDBOX, fs, 'readFileSync').returns(script);
-    await Command.run(args.concat('-f', 'path/to/script.js'));
-    expect(validateVariables.calledOnce).to.be.true;
-    expect(validateVariables.args[0][0] instanceof Connection).to.be.true;
-    expect(validateVariables.args[0][1] instanceof Command).to.be.true;
+    const script = "await conn.query('SELECT Id FROM Account');";
+    const readFileSync = $$.SANDBOX.fake.returns(script);
+    const runInContext = $$.SANDBOX.fake();
+    const Command = await esmock(
+      '../../../../src/commands/kit/script/execute.js',
+      {
+        fs: { readFileSync },
+        vm: { runInContext },
+      }
+    );
+    await Command.run(
+      args.concat('-f', 'path/to/script.js', '--', '-a', '1', '-b')
+    );
+    expect(runInContext.calledOnce).to.be.true;
+    expect(runInContext.args[0][0]).to.contain(script);
+    expect(runInContext.args[0][1].argv).to.include({ a: 1, b: true });
+    expect(runInContext.args[0][1].context instanceof Command).to.be.true;
+    expect(runInContext.args[0][1].conn instanceof Connection).to.be.true;
+    expect(runInContext.args[0][1].console).to.eq(console);
+    expect(runInContext.args[0][2].filename).to.eq('path/to/script.js');
+    expect(runInContext.args[0][2].lineOffset).to.eq(-1);
   });
 
   it('REPL mode', async () => {
     const replServer = {
-      context: {},
-      on: (event, callback) => {
+      context: {} as any,
+      on: (event: string, callback: () => void) => {
         expect(event).to.eq('exit');
         callback();
       },
     };
-    stubMethod($$.SANDBOX, repl, 'start').returns(replServer);
+    const start = $$.SANDBOX.fake.returns(replServer);
+    const Command = await esmock(
+      '../../../../src/commands/kit/script/execute.js',
+      {
+        repl: { start },
+      }
+    );
     await Command.run(args);
-    expect(replServer.context['conn'] instanceof Connection).to.be.true;
-    expect(replServer.context['context'] instanceof Command).to.be.true;
+    expect(replServer.context.conn instanceof Connection).to.be.true;
+    expect(replServer.context.context instanceof Command).to.be.true;
   });
 });

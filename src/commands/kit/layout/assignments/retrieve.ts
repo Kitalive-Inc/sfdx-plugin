@@ -11,8 +11,16 @@ import {
   LayoutAssignment,
   LayoutAssignmentsPerProfile,
   ProfileMetadata,
-} from '../../../../types';
-import { completeDefaultNamespace, readMetadata } from '../../../../metadata';
+} from '../../../../types.js';
+import {
+  completeDefaultNamespace,
+  readMetadata,
+} from '../../../../metadata.js';
+
+type PackageDirectory = {
+  default: boolean;
+  path: string;
+};
 
 function assignmentsPerObject(
   assignments: LayoutAssignment[],
@@ -29,7 +37,7 @@ function assignmentsPerObject(
   return result;
 }
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'layout.assignments.retrieve'
@@ -126,15 +134,14 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
   }
 
   public async objectNamesFromLayouts(): Promise<string[]> {
-    // eslint-disable-next-line
-    const config: any = await this.getProjectConfig();
-    const packageDir = config.packageDirectories?.find(
-      (dir) => dir.default as boolean
+    const config = await this.getProjectConfig();
+    const packageDir = (config.packageDirectories as PackageDirectory[]).find(
+      (dir) => dir.default
     );
     if (!packageDir) return [];
 
     const pattern = path.join(
-      this.project.getPath(),
+      this.project!.getPath(),
       packageDir.path,
       '**/*.layout-meta.xml'
     );
@@ -144,12 +151,12 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       objectCounts.set(object, (objectCounts.get(object) ?? 0) + 1);
     }
     return [...objectCounts.keys()]
-      .filter((object) => objectCounts.get(object) >= 2)
+      .filter((object) => objectCounts.get(object)! >= 2)
       .sort();
   }
 
   private getProjectConfig() {
-    return this.project.resolveProjectConfig();
+    return this.project!.resolveProjectConfig();
   }
 
   private getProfileNames(conn: Connection): Promise<string[]> {
@@ -164,7 +171,7 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
 
   private readFile(file: string): Promise<LayoutAssignmentsPerProfile> {
     return fs.readJson(
-      path.join(this.project.getPath(), file)
+      path.join(this.project!.getPath(), file)
     ) as Promise<LayoutAssignmentsPerProfile>;
   }
 
@@ -172,8 +179,8 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
     file: string,
     data: LayoutAssignmentsPerProfile
   ): Promise<void> {
-    return fs.outputJson(path.join(this.project.getPath(), file), data, {
+    return fs.outputJson(path.join(this.project!.getPath(), file), data, {
       spaces: '\t',
-    }) as Promise<void>;
+    });
   }
 }

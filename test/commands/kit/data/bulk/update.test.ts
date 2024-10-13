@@ -1,10 +1,8 @@
 import { expect } from 'chai';
-import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import esmock from 'esmock';
+import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
 import * as csv from 'fast-csv';
-import fs from 'fs-extra';
-import Command from '../../../../../src/commands/kit/data/bulk/update';
 
 describe('kit data bulk update', () => {
   const $$ = new TestContext();
@@ -15,19 +13,33 @@ describe('kit data bulk update', () => {
     { LastName: 'contact3', Email: 'contact3@example.com' },
   ];
 
+  let Command: any;
   let bulkLoad: any;
+  let createReadStream: any;
   beforeEach(async () => {
     await $$.stubAuths(testOrg);
     stubSfCommandUx($$.SANDBOX);
     stubSpinner($$.SANDBOX);
-    stubMethod($$.SANDBOX, fs, 'createReadStream').returns(csv.write(csvRows));
-    bulkLoad = stubMethod($$.SANDBOX, Command.prototype, 'bulkLoad').resolves({
+
+    createReadStream = $$.SANDBOX.fake.returns(csv.write(csvRows));
+    Command = await esmock(
+      '../../../../../src/commands/kit/data/bulk/update.js',
+      {
+        '../../../../../src/bulk.js': await esmock(
+          '../../../../../src/bulk.js',
+          {
+            'fs-extra': { createReadStream },
+          }
+        ),
+      }
+    );
+    bulkLoad = $$.SANDBOX.stub(Command.prototype, 'bulkLoad').resolves({
       job: {},
       records: [],
     });
-    stubMethod($$.SANDBOX, Command.prototype, 'getFieldTypes').returns({});
-    stubMethod($$.SANDBOX, Command.prototype, 'parseCsv').resolves(csvRows);
-    stubMethod($$.SANDBOX, Command.prototype, 'saveCsv');
+    $$.SANDBOX.stub(Command.prototype, 'getFieldTypes').returns({});
+    $$.SANDBOX.stub(Command.prototype, 'parseCsv').resolves(csvRows);
+    $$.SANDBOX.stub(Command.prototype, 'saveCsv');
   });
 
   const defaultArgs = [
@@ -40,7 +52,7 @@ describe('kit data bulk update', () => {
   ];
   it(defaultArgs.join(' '), async () => {
     await Command.run(defaultArgs);
-    expect(fs.createReadStream.calledWith('data/Contact.csv')).to.be.true;
+    expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
     expect(bulkLoad.calledOnce).to.be.true;
     expect(bulkLoad.args[0][1]).to.eq('Contact');

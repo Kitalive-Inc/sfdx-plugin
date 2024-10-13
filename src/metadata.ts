@@ -1,13 +1,13 @@
 import { JsonMap } from '@salesforce/ts-types';
-import { Connection } from 'jsforce';
+import { Connection } from '@salesforce/core';
 import {
   Metadata,
   MetadataType,
   SaveResult,
   UpsertResult,
-} from 'jsforce/api/metadata';
-import { chunk } from './utils';
-import { CustomField } from './types';
+} from '@jsforce/jsforce-node/lib/api/metadata.js';
+import { chunk } from './utils.js';
+import { CustomField } from './types.js';
 
 let orgNamespace: string;
 export async function getOrgNamespace(conn: Connection): Promise<string> {

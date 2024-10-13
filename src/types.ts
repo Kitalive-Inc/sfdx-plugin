@@ -1,3 +1,5 @@
+import { JsonMap } from '@salesforce/ts-types';
+
 export type LayoutAssignment = {
   layout: string;
   recordType?: string;
@@ -14,21 +16,21 @@ export type ProfileMetadata = {
 
 export type ValueSet = {
   controllingField?: string | null | undefined;
-  restricted?: boolean | null | undefined;
+  restricted?: boolean | string | null | undefined;
   valueSetDefinition?: ValueSetValuesDefinition | null | undefined;
   valueSetName?: string | null | undefined;
-  valueSettings: ValueSettings[];
+  valueSettings?: ValueSettings[];
 };
 
 export type ValueSetValuesDefinition = {
-  sorted: boolean;
+  sorted?: boolean;
   value: CustomValue[];
 };
 
 export type CustomValue = {
   fullName?: string | null | undefined;
   color?: string | null | undefined;
-  default: boolean;
+  default?: boolean;
   description?: string | null | undefined;
   isActive?: boolean | null | undefined;
   label?: string | null | undefined;
@@ -40,13 +42,40 @@ export type ValueSettings = {
   valueName: string;
 };
 
-export interface CustomField {
+export type CustomField = JsonMap & {
   fullName: string;
-  label?: string;
-  type?: string;
-  defaultValue?: string;
+  label?: string | null | undefined;
+  type?: string | null | undefined;
+  defaultValue?: string | null | undefined;
+  deleteConstraint?: 'SetNull' | 'Restrict' | 'Cascade';
+  displayFormat?: string | null | undefined;
+  displayLocationInDecimal?: boolean | null | undefined;
+  formula?: string | null | undefined;
+  formulaTreatBlanksAs?: string | null | undefined;
+  lookupFilter?: LookupFilter;
+  relationshipLabel?: string | null | undefined;
+  reparentableMasterDetail?: boolean | null | undefined;
+  restricted?: boolean | string | null | undefined;
+  summaryFilterItems?: FilterItem[];
   valueSet?: ValueSet;
-  restricted?: boolean;
-  valueSetName?: string;
-  values?: string;
-}
+  valueSetName?: string | null | undefined;
+  values?: string | null | undefined;
+  writeRequiresMasterRead?: boolean | null | undefined;
+};
+
+export type FilterItem = {
+  field: string;
+  operation: string;
+  value?: string;
+  valueField?: string;
+};
+
+export type LookupFilter = {
+  active: boolean;
+  booleanFilter?: string;
+  description?: string;
+  errorMessage?: string;
+  filterItems: FilterItem[];
+  infoMessage?: string;
+  isOptional: boolean;
+};

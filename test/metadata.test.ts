@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { expect } from 'chai';
-import { Connection } from 'jsforce';
-import { TestContext } from '@salesforce/core/lib/testSetup';
-import * as metadata from '../src/metadata';
-import { range } from '../src/utils';
+import { Connection } from '@jsforce/jsforce-node';
+import { TestContext } from '@salesforce/core/testSetup';
+import * as metadata from '../src/metadata.js';
+import { range } from '../src/utils.js';
 
 describe('chunkMetadata', () => {
   it('CustomObject are chunked every 10', () => {

@@ -1,8 +1,8 @@
 import { Readable } from 'stream';
 import { expect } from 'chai';
 import * as csv from 'fast-csv';
-import { encodeStream } from 'iconv-lite';
-import * as utils from '../src/utils';
+import iconv from 'iconv-lite';
+import * as utils from '../src/utils.js';
 
 describe('chunk', () => {
   it('array is smaller than chunk size', () => {
@@ -65,8 +65,10 @@ describe('parseCsv', () => {
         },
       });
       throw new Error('no error is thrown');
-    } catch (e) {
-      expect(e.message).to.contain("The column 'invalid_col' is not found");
+    } catch (e: unknown) {
+      expect((e as Error).message).to.contain(
+        "The column 'invalid_col' is not found"
+      );
     }
   });
 
@@ -120,7 +122,7 @@ describe('parseCsv', () => {
 
   it('with encoding', async () => {
     const rows = await utils.parseCsv(
-      Readable.from('col1,col2\n値1,値2').pipe(encodeStream('cp932')),
+      Readable.from('col1,col2\n値1,値2').pipe(iconv.encodeStream('cp932')),
       { encoding: 'cp932' }
     );
     expect(rows).to.eql([{ col1: '値1', col2: '値2' }]);

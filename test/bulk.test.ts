@@ -1,8 +1,9 @@
 import { expect } from 'chai';
-import { normalizeDateString } from '../src/bulk';
+import { normalizeDateString } from '../src/bulk.js';
 
 describe('normalizeDateString', () => {
   it('null', () => {
+    // @ts-ignore
     expect(normalizeDateString(null)).to.be.null;
   });
 

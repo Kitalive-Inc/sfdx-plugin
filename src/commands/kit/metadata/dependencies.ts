@@ -1,9 +1,11 @@
 import { Connection, Messages } from '@salesforce/core';
 import * as csv from 'fast-csv';
 import express from 'express';
-import { ServerCommand } from '../../../server';
+import { ServerCommand } from '../../../server.js';
+import { getScriptDir } from '../../../utils.js';
+const scriptDir = getScriptDir(import.meta.url);
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'metadata.dependencies'
@@ -18,12 +20,6 @@ type Metadata = {
 type MetadataCache = {
   [id: string]: Set<Metadata>;
 };
-
-function orderByField<T>(array: T[], field: string): T[] {
-  return array.sort((a, b) =>
-    String(a[field] ?? '').localeCompare(String(b[field] ?? ''))
-  );
-}
 
 function packageXml(data: Metadata[], version: string): string {
   data.sort(
@@ -55,7 +51,7 @@ function packageXml(data: Metadata[], version: string): string {
 
 class MetadataQuery {
   private conn: Connection;
-  private describeCache: string[];
+  private describeCache?: string[];
   private typeCache: { [type: string]: string } = {};
   private metadataCache: { [type: string]: Map<string, Metadata> } = {};
   private usageCache: MetadataCache = {};
@@ -99,7 +95,7 @@ class MetadataQuery {
     ];
     if (recursive) {
       const idMap = await this.getMetadataMap(type);
-      result.unshift(idMap.get(id));
+      result.unshift(idMap.get(id)!);
     }
     return result;
   }
@@ -117,7 +113,7 @@ class MetadataQuery {
     ];
     if (recursive) {
       const idMap = await this.getMetadataMap(type);
-      result.unshift(idMap.get(id));
+      result.unshift(idMap.get(id)!);
     }
     return result;
   }
@@ -126,7 +122,9 @@ class MetadataQuery {
     if (this.metadataCache[type]) return this.metadataCache[type];
     const idMap = new Map<string, Metadata>();
     const list = await this.conn.metadata.list({ type });
-    for (const meta of orderByField(list, 'fullName')) {
+    for (const meta of list.sort((a, b) =>
+      (a.fullName ?? '').localeCompare(b.fullName ?? '')
+    )) {
       idMap.set(meta.id, meta);
     }
     this.metadataCache[type] = idMap;
@@ -141,10 +139,10 @@ class MetadataQuery {
     result?: Set<Metadata>
   ): Promise<Set<Metadata>> {
     result ??= new Set();
-    ids = [].concat(ids);
-    const dependentIds = [];
-    const fetchIds = [];
-    const add = (item) => {
+    ids = ([] as string[]).concat(ids);
+    const dependentIds: string[] = [];
+    const fetchIds: string[] = [];
+    const add = (item: Metadata) => {
       if (result.has(item)) return;
       result.add(item);
       dependentIds.push(item.id);
@@ -203,7 +201,7 @@ export default class MetadataDependencies extends ServerCommand {
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(MetadataDependencies);
-    const conn = flags['target-org']!.getConnection(flags['api-version']);
+    const conn = flags['target-org'].getConnection(flags['api-version']);
     const metadata = new MetadataQuery(conn);
     await metadata.describe();
 
@@ -230,12 +228,12 @@ export default class MetadataDependencies extends ServerCommand {
     this.serve(flags.port, (app) => {
       app.use(
         '/assets',
-        express.static(__dirname + '/../../../../public/dist/assets')
+        express.static(scriptDir + '/../../../../public/dist/assets')
       );
 
       app.get('/', (req, res) => {
         res.sendFile('metadata-dependencies.html', {
-          root: __dirname + '/../../../../public/dist',
+          root: scriptDir + '/../../../../public/dist',
         });
       });
 
@@ -253,7 +251,7 @@ export default class MetadataDependencies extends ServerCommand {
           req.params.id,
           req.query.recursive === 'true'
         );
-        handleDependencies(data, req.query.format, res);
+        handleDependencies(data, req.query.format as string, res);
       });
 
       app.get('/api/metadata/references/:type/:id', async (req, res) => {
@@ -262,7 +260,7 @@ export default class MetadataDependencies extends ServerCommand {
           req.params.id,
           req.query.recursive === 'true'
         );
-        handleDependencies(data, req.query.format, res);
+        handleDependencies(data, req.query.format as string, res);
       });
     });
   }

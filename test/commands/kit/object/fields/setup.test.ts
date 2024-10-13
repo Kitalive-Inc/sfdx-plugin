@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { setFieldOptions } from '../../../../../src/commands/kit/object/fields/setup';
-import { CustomField } from '../../../../../src/types';
+import { setFieldOptions } from '../../../../../src/commands/kit/object/fields/setup.js';
+import { CustomField } from '../../../../../src/types.js';
 
 describe('setFieldOptions', () => {
   const field = (type: string, options = {}): CustomField => ({
@@ -23,7 +23,7 @@ describe('setFieldOptions', () => {
 
   describe('Checkbox', () => {
     it('on create', () => {
-      expect(subject('Checkbox')).to.have.property('defaultValue', false);
+      expect(subject('Checkbox')).to.have.property('defaultValue', 'false');
       expect(subject('Checkbox', { defaultValue: true })).to.have.property(
         'defaultValue',
         true
@@ -177,8 +177,8 @@ describe('setFieldOptions', () => {
           restricted: false,
           values: 'item1;item2\nitem3 : item3_label',
         });
-        expect(result.valueSet.restricted).to.be.false;
-        expect(result.valueSet.valueSetDefinition.value).to.eql([
+        expect(result.valueSet!.restricted).to.be.false;
+        expect(result.valueSet!.valueSetDefinition!.value).to.eql([
           { valueName: 'item1', label: 'item1' },
           { valueName: 'item2', label: 'item2' },
           { valueName: 'item3', label: 'item3_label' },
@@ -214,8 +214,8 @@ describe('setFieldOptions', () => {
             },
           }
         );
-        expect(result.valueSet.restricted).to.be.false;
-        expect(result.valueSet.valueSetDefinition.value).to.eql([
+        expect(result.valueSet!.restricted).to.be.false;
+        expect(result.valueSet!.valueSetDefinition!.value).to.eql([
           { valueName: 'item3', label: 'item3' },
           { valueName: 'item1', label: 'item1_label', default: true },
           { valueName: 'item4', label: 'item4_label' },
@@ -240,8 +240,8 @@ describe('setFieldOptions', () => {
             },
           }
         );
-        expect(result.valueSet.restricted).to.be.true;
-        expect(result.valueSet.valueSetDefinition.value).to.eql([
+        expect(result.valueSet!.restricted).to.be.true;
+        expect(result.valueSet!.valueSetDefinition!.value).to.eql([
           {
             valueName: 'item1',
             label: 'item1_label_change',

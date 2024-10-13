@@ -1,18 +1,11 @@
 import { expect } from 'chai';
-import { SfProject } from '@salesforce/core';
-import { MockTestOrgData, TestContext } from '@salesforce/core/lib/testSetup';
+import esmock from 'esmock';
+import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
-import { spyMethod, stubMethod } from '@salesforce/ts-sinon';
-import { Config } from '@oclif/core';
-import Command from '../../../../../src/commands/kit/layout/assignments/retrieve';
-import * as metadata from '../../../../../src/metadata';
 
 describe('kit layout assignments retrieve', () => {
   const $$ = new TestContext();
   const testOrg = new MockTestOrgData();
-  const config = new Config({
-    root: __dirname + '/../../../../../package.json',
-  });
 
   const projectConfig = {
     packageDirectories: [
@@ -46,6 +39,7 @@ describe('kit layout assignments retrieve', () => {
     },
   ];
 
+  let Command: any;
   let readMetadata: any;
   let objectNamesFromLayouts: any;
   let findFiles: any;
@@ -58,44 +52,44 @@ describe('kit layout assignments retrieve', () => {
     await $$.stubAuths(testOrg);
     ux = stubSfCommandUx($$.SANDBOX);
     spinner = stubSpinner($$.SANDBOX);
-    readMetadata = stubMethod($$.SANDBOX, metadata, 'readMetadata').callsFake(
-      async (conn, type, names: string[]) =>
-        names.map((fullName) => ({ fullName, layoutAssignments }))
+    const completeDefaultNamespace = $$.SANDBOX.fake((conn, names) => names);
+    readMetadata = $$.SANDBOX.fake(async (conn, type, names: string[]) =>
+      names.map((fullName) => ({ fullName, layoutAssignments }))
     );
-    stubMethod($$.SANDBOX, metadata, 'completeDefaultNamespace').callsFake(
-      async (conn, names) => names
+    Command = await esmock(
+      '../../../../../src/commands/kit/layout/assignments/retrieve.js',
+      {
+        '../../../../../src/metadata.js': {
+          completeDefaultNamespace,
+          readMetadata,
+        },
+      }
     );
-    objectNamesFromLayouts = spyMethod(
-      $$.SANDBOX,
+    objectNamesFromLayouts = $$.SANDBOX.spy(
       Command.prototype,
       'objectNamesFromLayouts'
     );
-    findFiles = stubMethod($$.SANDBOX, Command.prototype, 'findFiles').returns([
+    findFiles = $$.SANDBOX.stub(Command.prototype, 'findFiles').returns([
       'force-app/ext/layouts/Opportunity-Opportunity Layout1.layout-meta.xml',
       'force-app/ext/layouts/Opportunity-Opportunity Layout2.layout-meta.xml',
       'force-app/main/default/layouts/Account-Account Layout1.layout-meta.xml',
       'force-app/main/default/layouts/Account-Account Layout2.layout-meta.xml',
       'force-app/main/default/layouts/Contact-Contact Layout.layout-meta.xml',
     ]);
-    getProfileNames = stubMethod(
-      $$.SANDBOX,
+    getProfileNames = $$.SANDBOX.stub(
       Command.prototype,
       'getProfileNames'
     ).resolves(Array.from(Array(12), (_, i) => 'profile' + (i + 1)));
-    readFile = stubMethod($$.SANDBOX, Command.prototype, 'readFile').returns({
+    readFile = $$.SANDBOX.stub(Command.prototype, 'readFile').returns({
       Admin: [{ layout: 'Account-Account Layout.layout-meta.xml' }],
     });
-    writeFile = stubMethod($$.SANDBOX, Command.prototype, 'writeFile');
+    writeFile = $$.SANDBOX.stub(Command.prototype, 'writeFile');
 
-    stubMethod($$.SANDBOX, Command.prototype, 'getProjectConfig').returns(
-      projectConfig
-    );
+    $$.setConfigStubContents('SfProjectJson', { contents: projectConfig });
   });
 
   it('only required arguments', async () => {
-    const command = new Command(['-o', 'test@foo.bar'], config);
-    command.project = SfProject.getInstance();
-    await command.run();
+    await Command.run(['-o', 'test@foo.bar']);
     expect(objectNamesFromLayouts.calledOnce).to.be.true;
     expect(findFiles.calledOnce).to.be.true;
     expect(findFiles.args[0][0].replaceAll('\\', '/')).to.contain(
@@ -109,6 +103,7 @@ describe('kit layout assignments retrieve', () => {
 
     const data = {};
     for (let i = 1; i <= 12; i++) {
+      // @ts-ignore
       data['profile' + i] = [
         {
           layout: 'Account-Account Layout1.layout-meta.xml',
@@ -138,25 +133,20 @@ describe('kit layout assignments retrieve', () => {
   });
 
   it('with optional arguments', async () => {
-    const command = new Command(
-      [
-        '-o',
-        'test@foo.bar',
-        '-f',
-        'config/test.json',
-        '-p',
-        'Admin',
-        '-p',
-        'Standard',
-        '-s',
-        'Account',
-        '-s',
-        'Contact',
-      ],
-      config
-    );
-    command.project = SfProject.getInstance();
-    await command.run();
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-f',
+      'config/test.json',
+      '-p',
+      'Admin',
+      '-p',
+      'Standard',
+      '-s',
+      'Account',
+      '-s',
+      'Contact',
+    ]);
     expect(objectNamesFromLayouts.called).to.be.false;
     expect(findFiles.called).to.be.false;
     expect(getProfileNames.called).to.be.false;
@@ -167,6 +157,7 @@ describe('kit layout assignments retrieve', () => {
 
     const data = {};
     for (const profile of ['Admin', 'Standard']) {
+      // @ts-ignore
       data[profile] = [
         {
           layout: 'Account-Account Layout1.layout-meta.xml',
@@ -192,20 +183,15 @@ describe('kit layout assignments retrieve', () => {
   });
 
   it('with merge option', async () => {
-    const command = new Command(
-      [
-        '-o',
-        'test@foo.bar',
-        '-f',
-        'config/test.json',
-        '-p',
-        'Standard',
-        '--merge',
-      ],
-      config
-    );
-    command.project = SfProject.getInstance();
-    await command.run();
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-f',
+      'config/test.json',
+      '-p',
+      'Standard',
+      '--merge',
+    ]);
     expect(readFile.calledOnce).to.be.true;
     expect(readFile.args[0][0]).to.eq('config/test.json');
     expect(writeFile.calledOnce).to.be.true;

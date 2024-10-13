@@ -1,6 +1,6 @@
 /* eslint-disable */
 import path from 'path';
-import { Messages, Org } from '@salesforce/core';
+import { Connection, Messages } from '@salesforce/core';
 import { Duration } from '@salesforce/kit';
 import {
   Flags,
@@ -10,53 +10,69 @@ import {
 import { JsonMap } from '@salesforce/ts-types';
 import dayjs from 'dayjs';
 import * as csv from 'fast-csv';
+// @ts-ignore
 import fs from 'fs-extra';
-import { Connection } from 'jsforce';
+import { Record } from '@jsforce/jsforce-node';
 import {
   BatchInfo,
   BulkIngestBatchResult,
   BulkOptions as JobOptions,
-  IngestOperation,
   JobInfo,
-} from 'jsforce/api/bulk';
-import CsvConvertCommand from './commands/kit/data/csv/convert';
-import * as utils from './utils';
+} from '@jsforce/jsforce-node/lib/api/bulk.js';
+import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
+import CsvConvertCommand from './commands/kit/data/csv/convert.js';
+import * as utils from './utils.js';
 
-Messages.importMessagesDirectory(__dirname);
-const messages = Messages.loadMessages('@kitalive/sfdx-plugin', 'data.bulk');
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
+export const messages = Messages.loadMessages(
+  '@kitalive/sfdx-plugin',
+  'data.bulk'
+);
 
-type BulkOptions = JobOptions & {
+export type BulkOptions = JobOptions & {
   batchSize?: number;
   wait?: number;
 };
 
-export type BulkResult = {
-  job?: JobInfo;
-  batches?: BatchInfo[];
-  records: BulkIngestBatchResult;
-  errors?: JsonMap[];
+export type BatchError = {
+  line: number;
+  message: string;
+  data: Record;
 };
+
+export type BulkResult =
+  | {
+      job?: JobInfo;
+      batches?: BatchInfo[];
+      records: BulkIngestBatchResult;
+      errors?: BatchError[];
+    }
+  | undefined;
 
 export type QueryOptions = {
   all?: boolean;
   wait?: number;
 };
 
-export function bulkQuery(
+export async function bulkQuery(
   conn: Connection,
   query: string,
   options?: QueryOptions
-): Promise<JsonMap[]> {
+): Promise<Record[]> {
   const wait = options?.wait ?? 5;
   conn.bulk2.pollTimeout = Duration.minutes(wait).milliseconds;
-  return conn.bulk2.query(query, options?.all ? { scanAll: true } : {});
+  const result = await conn.bulk2.query(
+    query,
+    options?.all ? { scanAll: true } : {}
+  );
+  return result.toArray();
 }
 
 export function bulkLoad(
   conn: Connection,
   sobject: string,
   operation: IngestOperation,
-  rows: JsonMap[],
+  rows: Record[],
   options?: BulkOptions
 ): Promise<BulkResult> {
   const { batchSize = 10000, wait, ...jobOptions } = options || {};
@@ -68,7 +84,7 @@ export function bulkLoad(
     records,
   });
 
-  const executeBatch = (batchRows) =>
+  const executeBatch = (batchRows: Record[]) =>
     new Promise((resolve, reject) => {
       const batch = job.createBatch();
 
@@ -114,276 +130,275 @@ export function bulkLoad(
   });
 }
 
-export function normalizeDateString(str, format?) {
+export function normalizeDateString(str: string, format?: string) {
   if (!str) return str;
   const d = dayjs(str);
   return format ? d.format(format) : d.toISOString();
 }
 
 const converters = {
-  date: (value) => normalizeDateString(value, 'YYYY-MM-DD'),
+  date: (value: string) => normalizeDateString(value, 'YYYY-MM-DD'),
   datetime: normalizeDateString,
 };
 
 const csvFlags = CsvConvertCommand.flags;
 
-export const createBulkCommand = (operation: IngestOperation) =>
-  class extends SfCommand<BulkResult> {
-    public static description = messages.getMessage('description');
-
-    public static examples = messages.getMessages('examples', [
-      operation.charAt(0).toUpperCase() + operation.slice(1),
-    ]);
-
-    public static requiresProject = false;
-
-    public static flags = {
-      sobject: Flags.string({
-        char: 's',
-        required: true,
-        summary: messages.getMessage('flags.sobject.summary', [operation]),
-      }),
-      // csv settings
-      csvfile: Flags.string({
-        char: 'f',
-        required: true,
-        summary: messages.getMessage('flags.csvfile.summary', [operation]),
-      }),
-      resultfile: Flags.string({
-        char: 'r',
-        summary: messages.getMessage('flags.resultfile.summary', [operation]),
-      }),
-      encoding: csvFlags.encoding,
-      delimiter: csvFlags.delimiter,
-      quote: csvFlags.quote,
-      skiplines: csvFlags.skiplines,
-      trim: csvFlags.trim,
-      mapping: csvFlags.mapping,
-      converter: csvFlags.converter,
-      setnull: Flags.boolean({
-        summary: messages.getMessage('flags.setnull.summary', [operation]),
-      }),
-      convertonly: Flags.boolean({
-        summary: messages.getMessage('flags.convertonly.summary', [operation]),
-      }),
-      // job settings
-      concurrencymode: Flags.string({
-        default: 'Parallel',
-        summary: messages.getMessage('flags.concurrencymode.summary'),
-      }),
-      assignmentruleid: Flags.string({
-        summary: messages.getMessage('flags.assignmentruleid.summary'),
-      }),
-      batchsize: Flags.integer({
-        min: 1,
-        max: 10000,
-        default: 10000,
-        summary: messages.getMessage('flags.batchsize.summary'),
-      }),
-      wait: Flags.integer({
-        char: 'w',
-        min: 0,
-        summary: messages.getMessage('flags.wait.summary'),
-      }),
-      'target-org': requiredOrgFlagWithDeprecations,
-      'api-version': Flags.orgApiVersion(),
-    };
-
-    public org: Org;
-    public conn: Connection;
-    public flags: JsonMap;
-
-    public async run(): Promise<BulkResult> {
-      const { flags } = await this.parse();
-      this.org = flags['target-org'];
-      const conn = this.org.getConnection(flags['api-version']);
-      this.conn = conn;
-      this.flags = flags;
-      const {
-        sobject,
-        csvfile,
-        mapping,
-        converter,
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim,
-        setnull,
-      } = flags;
-
-      const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
-      const script = converter
-        ? utils.loadScript(converter)
-        : ({} as utils.Converter);
-      const fieldTypes = await this.getFieldTypes(conn, sobject);
-
-      this.spinner.start('Processing csv');
-      try {
-        if (script.start) await script.start(this);
-
-        let rows = await this.parseCsv(fs.createReadStream(csvfile), {
-          encoding,
-          delimiter,
-          quote,
-          skiplines,
-          trim: !!trim,
-          setnull,
-          mapping: mappingJson,
-          convert: script.convert,
-          fieldTypes,
-        });
-
-        if (script.finish) {
-          const result = await script.finish(rows, this);
-          if (result) rows = result;
-        }
-
-        this.spinner.stop();
-
-        if (flags.convertonly) {
-          const base = path.basename(csvfile, path.extname(csvfile));
-          await this.saveCsv(
-            path.join(path.dirname(csvfile), base + '.converted.csv'),
-            rows
-          );
-          return;
-        }
-
-        this.spinner.start(`Bulk ${operation}`);
-        const result = await this.bulkLoad(conn, sobject, operation, rows, {
-          extIdField: flags.externalid,
-          concurrencyMode: flags.concurrencymode,
-          assignmentRuleId: flags.assignmentruleid,
-          batchSize: flags.batchsize,
-          wait: flags.wait,
-        });
-
-        const batchErrors = [];
-        if (flags.wait) {
-          const { numberRecordsProcessed, numberRecordsFailed } =
-            result.job as unknown as JsonMap;
-          this.spinner.stop(
-            `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
-          );
-
-          rows = rows.map((data, i) => {
-            const { id, errors } = result.records[i] || {};
-            const message = errors?.join(', ');
-            if (message) {
-              batchErrors.push({ line: i + 2, message, data });
-            }
-            return { ...data, Id: id, Errors: message };
-          });
-
-          if (batchErrors.length) {
-            result.errors = batchErrors;
-            this.styledHeader('Error details');
-            this.table(batchErrors, {
-              line: { header: 'LINE' },
-              message: { header: 'MESSAGE' },
-            });
-          }
-        } else {
-          this.spinner.stop();
-          this.log(
-            messages.getMessage('asyncJob', [
-              this.config.bin,
-              this.org.getUsername(),
-              result.job?.id,
-            ])
-          );
-        }
-
-        if (flags.resultfile) await this.saveCsv(flags.resultfile, rows);
-
-        return result;
-      } catch (e) {
-        this.spinner.stop('error');
-        throw e;
-      }
-    }
-
-    public async parseCsv(
-      input: string | NodeJS.ReadableStream,
-      options?: {
-        encoding?: string;
-        delimiter?: string;
-        quote?: string;
-        skiplines?: number;
-        trim?: boolean;
-        setnull?: boolean;
-        mapping?: JsonMap;
-        convert?: (row: JsonMap) => JsonMap | null | undefined;
-        fieldTypes?: { [field: string]: string };
-      }
-    ): Promise<JsonMap[]> {
-      const {
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim,
-        mapping,
-        convert,
-        setnull,
-        fieldTypes,
-      } = options ?? {};
-      return utils.parseCsv(
-        typeof input === 'string' ? fs.createReadStream(input) : input,
-        {
-          encoding,
-          delimiter,
-          quote,
-          skiplines,
-          trim,
-          mapping,
-          convert: (row) => {
-            const result = convert ? convert(row) : row;
-            if (!result) return;
-            if (fieldTypes) {
-              for (const key of Object.keys(result)) {
-                const converter = converters[fieldTypes[key]];
-                if (converter) result[key] = converter(result[key]);
-              }
-            }
-            if (setnull) {
-              for (const key of Object.keys(result)) {
-                if (key.includes('.')) continue; // skip reference
-                if (result[key] == null || result[key] === '')
-                  result[key] = '#N/A';
-              }
-            }
-            return result;
-          },
-        }
-      );
-    }
-
-    public async saveCsv(file, rows): Promise<void> {
-      return new Promise((resolve, reject) => {
-        csv
-          .writeToPath(file, rows, { headers: true, writeBOM: true })
-          .on('error', reject)
-          .on('finish', resolve);
-      });
-    }
-
-    private bulkLoad(
-      conn: Connection,
-      sobject: string,
-      op: IngestOperation,
-      rows: JsonMap[],
-      options?: BulkOptions
-    ) {
-      return bulkLoad(conn, sobject, op, rows, options);
-    }
-
-    private async getFieldTypes(conn, sobject) {
-      const objectInfo = await conn.describe(sobject);
-      return objectInfo.fields.reduce(
-        (info, { name, type }) => Object.assign(info, { [name]: type }),
-        {}
-      );
-    }
+export function commonFlags(operation: IngestOperation) {
+  return {
+    sobject: Flags.string({
+      char: 's',
+      required: true,
+      summary: messages.getMessage('flags.sobject.summary', [operation]),
+    }),
+    // csv settings
+    csvfile: Flags.string({
+      char: 'f',
+      required: true,
+      summary: messages.getMessage('flags.csvfile.summary', [operation]),
+    }),
+    resultfile: Flags.string({
+      char: 'r',
+      summary: messages.getMessage('flags.resultfile.summary', [operation]),
+    }),
+    encoding: csvFlags.encoding,
+    delimiter: csvFlags.delimiter,
+    quote: csvFlags.quote,
+    skiplines: csvFlags.skiplines,
+    trim: csvFlags.trim,
+    mapping: csvFlags.mapping,
+    converter: csvFlags.converter,
+    setnull: Flags.boolean({
+      summary: messages.getMessage('flags.setnull.summary', [operation]),
+    }),
+    convertonly: Flags.boolean({
+      summary: messages.getMessage('flags.convertonly.summary', [operation]),
+    }),
+    // job settings
+    concurrencymode: Flags.string({
+      default: 'Parallel',
+      summary: messages.getMessage('flags.concurrencymode.summary'),
+    }),
+    assignmentruleid: Flags.string({
+      summary: messages.getMessage('flags.assignmentruleid.summary'),
+    }),
+    batchsize: Flags.integer({
+      min: 1,
+      max: 10000,
+      default: 10000,
+      summary: messages.getMessage('flags.batchsize.summary'),
+    }),
+    wait: Flags.integer({
+      char: 'w',
+      min: 0,
+      summary: messages.getMessage('flags.wait.summary'),
+    }),
+    'target-org': requiredOrgFlagWithDeprecations,
+    'api-version': Flags.orgApiVersion(),
   };
+}
+
+export abstract class BulkCommand extends SfCommand<BulkResult> {
+  public static description = messages.getMessage('description');
+
+  public static requiresProject = false;
+
+  protected abstract operation: IngestOperation;
+
+  public async run(): Promise<BulkResult> {
+    const { flags } = await this.parse();
+    const org = flags['target-org'];
+    const conn = org.getConnection(flags['api-version']);
+    Object.defineProperties(this, {
+      org: { value: org },
+      conn: { value: conn },
+    });
+    const {
+      sobject,
+      csvfile,
+      mapping,
+      converter,
+      encoding,
+      delimiter,
+      quote,
+      skiplines,
+      trim,
+      setnull,
+    } = flags;
+
+    const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
+    const script = converter
+      ? await utils.loadScript(converter)
+      : ({} as utils.Converter);
+    const fieldTypes = await this.getFieldTypes(conn, sobject);
+
+    this.spinner.start('Processing csv');
+    try {
+      if (script.start) await script.start(this);
+
+      let rows = await this.parseCsv(fs.createReadStream(csvfile), {
+        encoding,
+        delimiter,
+        quote,
+        skiplines,
+        trim: !!trim,
+        setnull,
+        mapping: mappingJson,
+        convert: script.convert,
+        fieldTypes,
+      });
+
+      if (script.finish) {
+        const result = await script.finish(rows, this);
+        if (result) rows = result;
+      }
+
+      this.spinner.stop();
+
+      if (flags.convertonly) {
+        const base = path.basename(csvfile, path.extname(csvfile));
+        await this.saveCsv(
+          path.join(path.dirname(csvfile), base + '.converted.csv'),
+          rows
+        );
+        return;
+      }
+
+      this.spinner.start(`Bulk ${this.operation}`);
+      const result = await this.bulkLoad(conn, sobject, this.operation, rows, {
+        extIdField: flags.externalid,
+        concurrencyMode: flags.concurrencymode,
+        assignmentRuleId: flags.assignmentruleid,
+        batchSize: flags.batchsize,
+        wait: flags.wait,
+      });
+      if (!result) return;
+
+      const batchErrors: BatchError[] = [];
+      if (flags.wait) {
+        const { numberRecordsProcessed, numberRecordsFailed } =
+          result.job as unknown as JsonMap;
+        this.spinner.stop(
+          `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
+        );
+
+        rows = rows.map((data, i) => {
+          const { id, errors } = result.records[i] || {};
+          const message = errors?.join(', ');
+          if (message) {
+            batchErrors.push({ line: i + 2, message, data });
+          }
+          return { ...data, Id: id, Errors: message };
+        });
+
+        if (batchErrors.length) {
+          result.errors = batchErrors;
+          this.styledHeader('Error details');
+          this.table(batchErrors, {
+            line: { header: 'LINE' },
+            message: { header: 'MESSAGE' },
+          });
+        }
+      } else {
+        this.spinner.stop();
+        this.log(
+          messages.getMessage('asyncJob', [
+            this.config.bin,
+            conn.username,
+            result.job?.id,
+          ])
+        );
+      }
+
+      if (flags.resultfile) await this.saveCsv(flags.resultfile, rows);
+
+      return result;
+    } catch (e) {
+      this.spinner.stop('error');
+      throw e;
+    }
+  }
+
+  public async parseCsv(
+    input: string | NodeJS.ReadableStream,
+    options?: {
+      encoding?: string;
+      delimiter?: string;
+      quote?: string;
+      skiplines?: number;
+      trim?: boolean;
+      setnull?: boolean;
+      mapping?: JsonMap;
+      convert?: (row: JsonMap) => JsonMap | null | undefined;
+      fieldTypes?: { [field: string]: string };
+    }
+  ): Promise<JsonMap[]> {
+    const {
+      encoding,
+      delimiter,
+      quote,
+      skiplines,
+      trim,
+      mapping,
+      convert,
+      setnull,
+      fieldTypes,
+    } = options ?? {};
+    return utils.parseCsv(
+      typeof input === 'string' ? fs.createReadStream(input) : input,
+      {
+        encoding,
+        delimiter,
+        quote,
+        skiplines,
+        trim,
+        mapping,
+        convert: (row) => {
+          const result = convert ? convert(row) : row;
+          if (!result) return;
+          if (fieldTypes) {
+            for (const key of Object.keys(result)) {
+              // @ts-ignore
+              const converter = converters[fieldTypes[key]];
+              if (converter) result[key] = converter(result[key]);
+            }
+          }
+          if (setnull) {
+            for (const key of Object.keys(result)) {
+              if (key.includes('.')) continue; // skip reference
+              if (result[key] == null || result[key] === '')
+                result[key] = '#N/A';
+            }
+          }
+          return result;
+        },
+      }
+    );
+  }
+
+  public async saveCsv(file: string, rows: Record[]): Promise<void> {
+    return new Promise((resolve, reject) => {
+      csv
+        .writeToPath(file, rows, { headers: true, writeBOM: true })
+        .on('error', reject)
+        .on('finish', resolve);
+    });
+  }
+
+  protected bulkLoad(
+    conn: Connection,
+    sobject: string,
+    op: IngestOperation,
+    rows: JsonMap[],
+    options?: BulkOptions
+  ) {
+    return bulkLoad(conn, sobject, op, rows, options);
+  }
+
+  protected async getFieldTypes(conn: Connection, sobject: string) {
+    const objectInfo = await conn.describe(sobject);
+    return objectInfo.fields.reduce(
+      (info, { name, type }) => Object.assign(info, { [name]: type }),
+      {}
+    );
+  }
+}

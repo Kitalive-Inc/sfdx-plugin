@@ -1,9 +1,7 @@
 import { expect } from 'chai';
-import { TestContext } from '@salesforce/core/lib/testSetup';
-import { stubMethod } from '@salesforce/ts-sinon';
+import esmock from 'esmock';
+import { TestContext } from '@salesforce/core/testSetup';
 import * as csv from 'fast-csv';
-import fs from 'fs-extra';
-import Command from '../../../../../src/commands/kit/data/csv/convert';
 
 describe('kit data csv convert', () => {
   const $$ = new TestContext();
@@ -12,15 +10,25 @@ describe('kit data csv convert', () => {
     { a: 'a2', b: 'b2', c: 'c2' },
   ];
 
+  let Command: any;
+  let writeToStream: any;
   let createReadStream: any;
   let createWriteStream: any;
-  let writeCsv: any;
-  beforeEach(() => {
-    createReadStream = stubMethod($$.SANDBOX, fs, 'createReadStream').returns(
+  let readJson: any;
+  beforeEach(async () => {
+    writeToStream = $$.SANDBOX.fake();
+    createReadStream = $$.SANDBOX.fake.returns(
       csv.write(csvRows, { headers: true })
     );
-    createWriteStream = stubMethod($$.SANDBOX, fs, 'createWriteStream');
-    writeCsv = stubMethod($$.SANDBOX, Command.prototype, 'writeCsv');
+    createWriteStream = $$.SANDBOX.fake();
+    readJson = $$.SANDBOX.fake.returns({ field: 'b' });
+    Command = await esmock(
+      '../../../../../src/commands/kit/data/csv/convert.js',
+      {
+        'fast-csv': { writeToStream },
+        'fs-extra': { createReadStream, createWriteStream, readJson },
+      }
+    );
   });
 
   const defaultArgs = ['-i', 'data/input.csv', '-o', 'data/output.csv'];
@@ -28,31 +36,27 @@ describe('kit data csv convert', () => {
     await Command.run(defaultArgs);
     expect(createReadStream.calledWith('data/input.csv')).to.be.true;
     expect(createWriteStream.calledWith('data/output.csv')).to.be.true;
-    expect(writeCsv.calledOnce).to.be.true;
-    expect(writeCsv.args[0][0]).to.eql(csvRows);
+    expect(writeToStream.calledOnce).to.be.true;
+    expect(writeToStream.args[0][1]).to.eql(csvRows);
   });
 
   const mappingArgs = defaultArgs.concat('-m', 'data/mapping.json');
   it(mappingArgs.join(' '), async () => {
-    const readJson = stubMethod($$.SANDBOX, fs, 'readJson').resolves({
-      field: 'b',
-    });
     await Command.run(mappingArgs);
     expect(readJson.calledOnce).to.be.true;
     expect(readJson.args[0][0]).to.eq('data/mapping.json');
-    expect(writeCsv.args[0][0]).to.eql([{ field: 'b1' }, { field: 'b2' }]);
+    expect(writeToStream.args[0][1]).to.eql([{ field: 'b1' }, { field: 'b2' }]);
   });
 
   const convertArgs = defaultArgs.concat('-c', 'data/convert.js');
   it(convertArgs.join(' '), async () => {
-    const loadConverter = stubMethod(
-      $$.SANDBOX,
+    const loadConverter = $$.SANDBOX.stub(
       Command.prototype,
       'loadConverter'
-    ).returns((row) => ({ field: row.b.toUpperCase() }));
+    ).returns((row: any) => ({ field: row.b.toUpperCase() }));
     await Command.run(convertArgs);
     expect(loadConverter.calledOnce).to.be.true;
     expect(loadConverter.args[0][0]).to.eq('data/convert.js');
-    expect(writeCsv.args[0][0]).to.eql([{ field: 'B1' }, { field: 'B2' }]);
+    expect(writeToStream.args[0][1]).to.eql([{ field: 'B1' }, { field: 'B2' }]);
   });
 });

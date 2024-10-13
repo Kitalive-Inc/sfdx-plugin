@@ -1,13 +1,12 @@
 import { expect } from 'chai';
-import { TestContext } from '@salesforce/core/lib/testSetup';
+import esmock from 'esmock';
+import { TestContext } from '@salesforce/core/testSetup';
 import { stubSpinner } from '@salesforce/sf-plugins-core';
-import { stubMethod } from '@salesforce/ts-sinon';
-import Command from '../../../../../src/commands/kit/object/fields/describe';
-import * as metadata from '../../../../../src/metadata';
+import { CustomField } from '../../../../../src/types.js';
 
 describe('kit object fields describe', () => {
   const $$ = new TestContext();
-  const fields = [
+  const fields: CustomField[] = [
     { fullName: 'Text__c', type: 'Text' },
     {
       fullName: 'Picklist__c',
@@ -15,10 +14,11 @@ describe('kit object fields describe', () => {
       valueSet: {
         restricted: false,
         valueSetDefinition: {
+          sorted: true,
           value: [
-            { valueName: 'item1', label: 'item1' },
-            { valueName: 'item2', label: 'item2' },
-            { valueName: 'item3_value', label: 'item3' },
+            { valueName: 'item1', label: 'item1', default: false },
+            { valueName: 'item2', label: 'item2', default: false },
+            { valueName: 'item3_value', label: 'item3', default: false },
           ],
         },
       },
@@ -33,17 +33,20 @@ describe('kit object fields describe', () => {
     },
   ];
 
+  let Command: any;
   let getCustomFields: any;
   let writeCsv: any;
   let spinner: any;
   beforeEach(async () => {
     spinner = stubSpinner($$.SANDBOX);
-    getCustomFields = stubMethod(
-      $$.SANDBOX,
-      metadata,
-      'getCustomFields'
-    ).resolves(fields);
-    writeCsv = stubMethod($$.SANDBOX, Command.prototype, 'writeCsv');
+    getCustomFields = $$.SANDBOX.fake.returns(fields);
+    Command = await esmock(
+      '../../../../../src/commands/kit/object/fields/describe.js',
+      {
+        '../../../../../src/metadata.js': { getCustomFields },
+      }
+    );
+    writeCsv = $$.SANDBOX.stub(Command.prototype, 'writeCsv');
   });
 
   it('with arguments', async () => {

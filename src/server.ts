@@ -5,7 +5,7 @@ import open from 'open';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('@kitalive/sfdx-plugin', 'server');
 
 export abstract class ServerCommand extends SfCommand<void> {
@@ -19,13 +19,10 @@ export abstract class ServerCommand extends SfCommand<void> {
     'api-version': Flags.orgApiVersion(),
   };
 
-  public serve(
-    port: number,
-    callback: (server: express.Express, express: express) => void
-  ) {
+  public serve(port: number, callback: (server: express.Express) => void) {
     const app = express();
     app.use(express.json());
-    callback(app, express);
+    callback(app);
     app.post('/quit', () => process.exit(0));
 
     app.listen(port, 'localhost', async () => {

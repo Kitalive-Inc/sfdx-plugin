@@ -1,7 +1,8 @@
 import { Messages } from '@salesforce/core';
-import { ServerCommand } from '../../../server';
+import { ServerCommand } from '../../../server.js';
+import { getScriptDir } from '../../../utils.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'graphql.editor'
@@ -16,13 +17,13 @@ export default class GraphqlEditor extends ServerCommand {
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(GraphqlEditor);
-    const conn = flags['target-org']!.getConnection(flags['api-version']);
+    const conn = flags['target-org'].getConnection(flags['api-version']);
 
     const endpoint = `/services/data/v${conn.version}/graphql`;
     this.serve(flags.port, (app) => {
       app.get('/', (req, res) => {
         res.sendFile('index.html', {
-          root: __dirname + '/../../../../public/graphql',
+          root: getScriptDir(import.meta.url) + '/../../../../public/graphql',
         });
       });
 

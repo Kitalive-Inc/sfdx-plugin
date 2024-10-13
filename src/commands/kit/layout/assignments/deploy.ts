@@ -6,11 +6,11 @@ import {
   requiredOrgFlagWithDeprecations,
 } from '@salesforce/sf-plugins-core';
 import fs from 'fs-extra';
-import { SaveResult } from 'jsforce/api/metadata';
-import { LayoutAssignmentsPerProfile } from '../../../../types';
-import { updateMetadata } from '../../../../metadata';
+import { SaveResult } from '@jsforce/jsforce-node/lib/api/metadata.js';
+import { LayoutAssignmentsPerProfile } from '../../../../types.js';
+import { updateMetadata } from '../../../../metadata.js';
 
-Messages.importMessagesDirectory(__dirname);
+Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
   '@kitalive/sfdx-plugin',
   'layout.assignments.deploy'
@@ -46,8 +46,8 @@ export default class LayoutAssignmentsDeploy extends SfCommand<SaveResult[]> {
     return updateMetadata(conn, 'Profile', profiles);
   }
 
-  private readFile(file): Promise<LayoutAssignmentsPerProfile> {
-    const inputFile = path.join(this.project.getPath(), file);
+  private readFile(file: string): Promise<LayoutAssignmentsPerProfile> {
+    const inputFile = path.join(this.project!.getPath(), file);
     return fs.readJson(inputFile) as Promise<LayoutAssignmentsPerProfile>;
   }
 }
