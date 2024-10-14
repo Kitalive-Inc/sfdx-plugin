@@ -1,9 +1,5 @@
 import { Connection, Messages } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import soqlParser from '@jetstreamapp/soql-parser-js';
 import { Record } from '@jsforce/jsforce-node';
@@ -57,7 +53,7 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       min: 0,
       summary: bulkMessages.getMessage('flags.wait.summary'),
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 

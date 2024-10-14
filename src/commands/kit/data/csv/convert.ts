@@ -20,14 +20,10 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     input: Flags.string({
       char: 'i',
       summary: messages.getMessage('flags.input.summary'),
-      aliases: ['inputfile', 'f'],
-      deprecateAliases: true,
     }),
     output: Flags.string({
       char: 'o',
       summary: messages.getMessage('flags.output.summary'),
-      aliases: ['outputfile'],
-      deprecateAliases: true,
     }),
     encoding: Flags.string({
       char: 'e',

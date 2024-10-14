@@ -3,11 +3,7 @@ import { Writable } from 'node:stream';
 import { Connection, Messages } from '@salesforce/core';
 import { write } from '@fast-csv/format';
 import { Record } from '@jsforce/jsforce-node';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import { bulkQuery, QueryOptions } from '../../../../bulk.js';
 
@@ -40,7 +36,7 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       summary: messages.getMessage('flags.wait.summary'),
       default: 5,
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 

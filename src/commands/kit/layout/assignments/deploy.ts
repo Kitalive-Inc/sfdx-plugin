@@ -1,10 +1,6 @@
 import path from 'node:path';
 import { Messages } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import fs from 'fs-extra';
 import { SaveResult } from '@jsforce/jsforce-node/lib/api/metadata.js';
 import { LayoutAssignmentsPerProfile } from '../../../../types.js';
@@ -30,7 +26,7 @@ export default class LayoutAssignmentsDeploy extends SfCommand<SaveResult[]> {
       summary: messages.getMessage('flags.file.summary'),
       default: 'config/layout-assignments.json',
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 

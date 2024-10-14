@@ -4,11 +4,7 @@ import path from 'node:path';
 import repl from 'node:repl';
 import vm from 'node:vm';
 import { Messages } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  optionalOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import yargs from 'yargs';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -31,7 +27,7 @@ export default class ScriptExecute extends SfCommand<void> {
       char: 'f',
       summary: messages.getMessage('flags.file.summary'),
     }),
-    'target-org': optionalOrgFlagWithDeprecations,
+    'target-org': Flags.optionalOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 

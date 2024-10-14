@@ -2,11 +2,7 @@
 import path from 'path';
 import { Connection, Messages } from '@salesforce/core';
 import { Duration } from '@salesforce/kit';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import dayjs from 'dayjs';
 import * as csv from 'fast-csv';
@@ -192,7 +188,7 @@ export function commonFlags(operation: IngestOperation) {
       min: 0,
       summary: messages.getMessage('flags.wait.summary'),
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 }

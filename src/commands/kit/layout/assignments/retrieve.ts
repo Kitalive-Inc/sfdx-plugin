@@ -1,10 +1,6 @@
 import path from 'node:path';
 import { Connection, Messages, SfError } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import glob from 'fast-glob';
 import fs from 'fs-extra';
 import {
@@ -73,7 +69,7 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       required: false,
       summary: messages.getMessage('flags.merge.summary'),
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 

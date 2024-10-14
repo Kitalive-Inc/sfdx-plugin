@@ -1,9 +1,5 @@
 import { Messages } from '@salesforce/core';
-import {
-  Flags,
-  SfCommand,
-  requiredOrgFlagWithDeprecations,
-} from '@salesforce/sf-plugins-core';
+import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import fs from 'fs-extra';
 import {
@@ -222,7 +218,7 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
     force: Flags.boolean({
       summary: messages.getMessage('flags.force.summary'),
     }),
-    'target-org': requiredOrgFlagWithDeprecations,
+    'target-org': Flags.requiredOrg(),
     'api-version': Flags.orgApiVersion(),
   };
 
