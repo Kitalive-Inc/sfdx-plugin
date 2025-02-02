@@ -22,7 +22,7 @@ function assignmentsPerObject(
   assignments: LayoutAssignment[],
   filterObjects?: string[]
 ) {
-  const result = new Map();
+  const result = new Map<string, LayoutAssignment[]>();
   for (const assignment of assignments) {
     const object = assignment.layout.split('-')[0];
     if (filterObjects && !filterObjects.includes(object)) continue;
@@ -113,7 +113,7 @@ export default class LayoutAssignmentsRetrieve extends SfCommand<LayoutAssignmen
       }
       data[profile.fullName] = Array.from(assignmentsMap.values())
         .flat()
-        .sort((a, b) => a.layout.localeCompare(b.layout) as number);
+        .sort((a, b) => a.layout.localeCompare(b.layout));
     }
     this.spinner.stop();
 

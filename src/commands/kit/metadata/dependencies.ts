@@ -167,12 +167,16 @@ class MetadataQuery {
         )
         .where({ [sourceIdField]: fetchIds });
       for (const item of items) {
-        const cacheSet = (cache[item[sourceIdField]] ??= new Set());
-        const type = item[targetFieldPrefix + 'MetadataComponentType'];
+        const cacheSet = (cache[item[sourceIdField] as string] ??= new Set());
+        const type = item[
+          targetFieldPrefix + 'MetadataComponentType'
+        ] as string;
         if (!this.typeCache[type]) continue;
         // eslint-disable-next-line no-await-in-loop
         const idMap = await this.getMetadataMap(type);
-        const meta = idMap.get(item[targetFieldPrefix + 'MetadataComponentId']);
+        const meta = idMap.get(
+          item[targetFieldPrefix + 'MetadataComponentId'] as string
+        );
         if (!meta) continue;
         cacheSet.add(meta);
         add(meta);

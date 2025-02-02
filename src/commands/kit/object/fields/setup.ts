@@ -165,7 +165,7 @@ function setPicklistOptions(field: CustomField, existingField?: CustomField) {
       // handle options to be deleted
       if (oldOptionMap.size) {
         const newOptionMap = new Map(
-          options.map((o) => [o.label as string, o as CustomValue])
+          options.map((o) => [o.label as string, o])
         );
         for (const { valueName, label } of oldOptionMap.values()) {
           // detect API name changes and change label to avoid duplicate labels

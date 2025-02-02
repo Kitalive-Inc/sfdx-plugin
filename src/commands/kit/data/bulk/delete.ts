@@ -1,4 +1,4 @@
-import { Connection, Messages } from '@salesforce/core';
+import { Connection, Messages, Org } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import soqlParser from '@jetstreamapp/soql-parser-js';
@@ -50,6 +50,7 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     }),
     wait: Flags.integer({
       char: 'w',
+      default: 0,
       min: 0,
       summary: bulkMessages.getMessage('flags.wait.summary'),
     }),
@@ -59,8 +60,9 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
 
   public async run(): Promise<BulkResult> {
     const { flags } = await this.parse();
-    const conn = flags['target-org'].getConnection(flags['api-version']);
-    const query = parseQuery(flags.query);
+    const org = flags['target-org'] as Org;
+    const conn = org.getConnection(flags['api-version'] as string);
+    const query = parseQuery(flags.query as string);
     query.fields = [getField('Id')];
     const soql = composeQuery(query);
 
@@ -81,8 +83,8 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
         rows,
         {
           concurrencyMode: flags.concurrencymode,
-          batchSize: flags.batchsize,
-          wait: flags.wait,
+          batchSize: flags.batchsize as number,
+          wait: flags.wait as number,
         }
       );
       if (!result) return;
@@ -110,7 +112,7 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
         this.log(
           bulkMessages.getMessage('asyncJob', [
             this.config.bin,
-            flags['target-org'].options.aliasOrUsername,
+            org.getUsername(),
             result.job?.id,
           ])
         );

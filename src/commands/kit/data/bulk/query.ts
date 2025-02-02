@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { Writable } from 'node:stream';
-import { Connection, Messages } from '@salesforce/core';
+import { Connection, Messages, Org } from '@salesforce/core';
 import { write } from '@fast-csv/format';
 import { Record } from '@jsforce/jsforce-node';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
@@ -42,14 +42,15 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
 
   public async run(): Promise<JsonMap[]> {
     const { flags } = await this.parse();
-    const conn = flags['target-org'].getConnection(flags['api-version']);
-    const file = flags.csvfile;
+    const org = flags['target-org'] as Org;
+    const conn = org.getConnection(flags['api-version'] as string);
+    const file = flags.csvfile as string;
 
     this.spinner.start('Bulk query');
     try {
-      const rows = await this.bulkQuery(conn, flags.query, {
-        all: flags.all,
-        wait: flags.wait,
+      const rows = await this.bulkQuery(conn, flags.query as string, {
+        all: flags.all as boolean,
+        wait: flags.wait as number,
       });
       if (!rows.length) {
         this.spinner.stop('no records');

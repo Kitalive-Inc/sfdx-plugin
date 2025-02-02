@@ -46,7 +46,7 @@ describe('kit data bulk delete', () => {
     expect(bulkLoad.args[0][4]).to.eql({
       concurrencyMode: 'Parallel',
       batchSize: 300,
-      wait: undefined,
+      wait: 0,
     });
   });
 

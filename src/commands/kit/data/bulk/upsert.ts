@@ -13,6 +13,7 @@ export default class UpsertCommand extends BulkCommand {
   public static examples = messages.getMessages('examples');
 
   public static flags = {
+    ...BulkCommand.flags,
     ...commonFlags('upsert'),
     externalid: Flags.string({
       char: 'i',

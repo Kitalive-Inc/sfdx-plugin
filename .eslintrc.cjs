@@ -6,7 +6,7 @@ module.exports = {
   root: true,
   rules: {
     '@typescript-eslint/ban-ts-comment': 'off',
-    '@typescript-eslint/no-misused-promises': 'warn',
+    '@typescript-eslint/no-misused-promises': 'off',
     '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
     '@typescript-eslint/no-unsafe-argument': 'warn',
     '@typescript-eslint/no-unsafe-assignment': 'warn',
@@ -19,5 +19,7 @@ module.exports = {
     complexity: 'warn',
     header: 'off',
     'import/no-extraneous-dependencies': 'off',
+    'no-param-reassign': 'off',
+    'sf-plugin/only-extend-SfCommand': 'off',
   },
 };
