@@ -20,7 +20,7 @@ export default class GraphqlEditor extends ServerCommand {
     const conn = flags['target-org'].getConnection(flags['api-version']);
 
     const endpoint = `/services/data/v${conn.version}/graphql`;
-    this.serve(flags.port, (app) => {
+    this.serve(flags, (app) => {
       app.get('/', (req, res) => {
         res.sendFile('index.html', {
           root: getScriptDir(import.meta.url) + '/../../../../public/graphql',

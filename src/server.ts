@@ -1,6 +1,6 @@
 import express from 'express';
 import 'express-async-errors';
-import open from 'open';
+import open, { apps } from 'open';
 
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
@@ -10,6 +10,11 @@ const messages = Messages.loadMessages('@kitalive/sfdx-plugin', 'server');
 
 export abstract class ServerCommand extends SfCommand<void> {
   public static readonly flags = {
+    browser: Flags.option({
+      summary: messages.getMessage('flags.browser.summary'),
+      char: 'b',
+      options: ['chrome', 'firefox', 'edge'],
+    })(),
     port: Flags.integer({
       summary: messages.getMessage('flags.port.summary'),
       char: 'p',
@@ -19,16 +24,23 @@ export abstract class ServerCommand extends SfCommand<void> {
     'api-version': Flags.orgApiVersion(),
   };
 
-  public serve(port: number, callback: (server: express.Express) => void) {
+  public serve(
+    options: {
+      browser?: string;
+      port: number;
+    },
+    callback: (server: express.Express) => void
+  ) {
     const app = express();
     app.use(express.json());
     callback(app);
     app.post('/quit', () => process.exit(0));
 
-    app.listen(port, 'localhost', async () => {
-      this.log(`Listening on port ${port}`);
+    app.listen(options.port, 'localhost', async () => {
+      const name = apps[options.browser as keyof typeof apps];
+      this.log(`Listening on port ${options.port}`);
       this.log('Use Ctrl-C to stop');
-      await open(`http://localhost:${port}`);
+      await open(`http://localhost:${options.port}`, { app: { name } });
     });
   }
 

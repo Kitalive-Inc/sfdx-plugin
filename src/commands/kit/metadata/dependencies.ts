@@ -229,7 +229,7 @@ export default class MetadataDependencies extends ServerCommand {
       }
     }
 
-    this.serve(flags.port, (app) => {
+    this.serve(flags, (app) => {
       app.use(
         '/assets',
         express.static(scriptDir + '/../../../../public/dist/assets')
