@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { pipeline } from 'node:stream';
 import { fileURLToPath } from 'node:url';
-import { Command } from '@oclif/core';
+import { SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import iconv from 'iconv-lite';
@@ -81,9 +81,9 @@ export function parseCsv(
 }
 
 export type Converter = {
-  start?: (context: Command) => void;
+  start?: (context: SfCommand<unknown>) => void;
   convert: (row: JsonMap) => JsonMap;
-  finish?: (rows: JsonMap[], context: Command) => JsonMap[];
+  finish?: (rows: JsonMap[], context: SfCommand<unknown>) => JsonMap[];
 };
 export async function loadScript(file: string): Promise<Converter> {
   let script: Converter;

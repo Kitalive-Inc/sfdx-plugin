@@ -289,9 +289,9 @@ export abstract class BulkCommand extends SfCommand<BulkResult> {
         if (batchErrors.length) {
           result.errors = batchErrors;
           this.styledHeader('Error details');
-          this.table(batchErrors, {
-            line: { header: 'LINE' },
-            message: { header: 'MESSAGE' },
+          this.table({
+            data: batchErrors,
+            columns: ['line', 'message'],
           });
         }
       } else {

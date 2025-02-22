@@ -306,10 +306,9 @@ export default class FieldsSetup extends SfCommand<SetupResult[]> {
     }
 
     this.styledHeader('Fields setup result');
-    this.table(results, {
-      field: { header: 'FIELD' },
-      result: { header: 'RESULT' },
-      error: { header: 'ERROR' },
+    this.table({
+      data: results,
+      columns: ['field', 'result', 'error'],
     });
     return results;
   }

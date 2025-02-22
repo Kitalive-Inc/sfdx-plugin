@@ -102,9 +102,9 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
         );
         if (errors.length) {
           this.styledHeader('Error details');
-          this.table(errors, {
-            id: { header: 'ID' },
-            errors: { header: 'ERRORS' },
+          this.table({
+            data: errors,
+            columns: ['id', 'errors'],
           });
         }
       } else {
