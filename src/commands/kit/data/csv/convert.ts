@@ -22,7 +22,7 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
       summary: messages.getMessage('flags.input.summary'),
     }),
     output: Flags.string({
-      char: 'o',
+      char: 'o', // eslint-disable-line sf-plugin/dash-o
       summary: messages.getMessage('flags.output.summary'),
     }),
     encoding: Flags.string({
@@ -59,10 +59,11 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     const { flags } = await this.parse(CsvConvert);
     const { converter, encoding, delimiter, quote, skiplines, trim } = flags;
 
-    const mapping = flags.mapping
-      ? await fs.readJson(flags.mapping)
+    const mapping: JsonMap | undefined = flags.mapping
+      ? ((await fs.readJson(flags.mapping)) as JsonMap)
       : undefined;
-    const convert = converter ? await this.loadConverter(converter) : undefined;
+    const convert: ((row: JsonMap) => JsonMap | null | undefined) | undefined =
+      converter ? await this.loadConverter(converter) : undefined;
 
     const input = flags.input
       ? fs.createReadStream(flags.input)

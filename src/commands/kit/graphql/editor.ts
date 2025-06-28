@@ -28,7 +28,7 @@ export default class GraphqlEditor extends ServerCommand {
       });
 
       app.post('/api/graphql', async (req, res) => {
-        res.json(await conn.requestPost(endpoint, req.body));
+        res.json(await conn.requestPost(endpoint, req.body as object));
       });
     });
   }

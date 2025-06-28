@@ -1,6 +1,5 @@
 import { Connection, Messages, Org } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
-import { JsonMap } from '@salesforce/ts-types';
 import soqlParser from '@jetstreamapp/soql-parser-js';
 import { Record } from '@jsforce/jsforce-node';
 import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
@@ -76,13 +75,13 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       }
 
       const operation = flags.hard ? 'hardDelete' : 'delete';
-      const result = await this.bulkLoad(
+        const result = await this.bulkLoad(
         conn,
         query.sObject!,
         operation,
         rows,
         {
-          concurrencyMode: flags.concurrencymode,
+          concurrencyMode: flags.concurrencymode as 'Serial' | 'Parallel',
           batchSize: flags.batchsize as number,
           wait: flags.wait as number,
         }
@@ -90,15 +89,13 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       if (!result) return;
 
       if (flags.wait) {
-        const { numberRecordsProcessed, numberRecordsFailed } =
-          result.job as unknown as JsonMap;
+        const numberRecordsProcessed = Number(result.job?.numberRecordsProcessed);
+        const numberRecordsFailed = Number(result.job?.numberRecordsFailed);
         const errors = result.records
           .filter((r) => !r.success)
           .map((r) => ({ id: r.id, errors: r.errors.join(', ') }));
         this.spinner.stop(
-          `${numberRecordsProcessed as number} processed, ${
-            numberRecordsFailed as number
-          } failed.`
+          `${numberRecordsProcessed} processed, ${numberRecordsFailed} failed.`
         );
         if (errors.length) {
           this.styledHeader('Error details');

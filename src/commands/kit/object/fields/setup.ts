@@ -25,6 +25,7 @@ const deepEquals = (
   obj2: JsonMap | null | undefined
 ) => JSON.stringify(obj1) === JSON.stringify(obj2);
 
+// eslint-disable-next-line complexity
 export function setFieldOptions(
   field: CustomField,
   existingField?: CustomField
