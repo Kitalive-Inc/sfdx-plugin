@@ -3,7 +3,7 @@ import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
 import fs from 'fs-extra';
-import { loadScript, parseCsv } from '../../../../utils.js';
+import * as utils from '../../../../utils.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages(
@@ -62,21 +62,29 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     const mapping: JsonMap | undefined = flags.mapping
       ? ((await fs.readJson(flags.mapping)) as JsonMap)
       : undefined;
-    const convert: ((row: JsonMap) => JsonMap | null | undefined) | undefined =
-      converter ? await this.loadConverter(converter) : undefined;
+    const script = converter
+      ? await utils.loadScript(converter)
+      : ({} as utils.Converter);
+
+    if (script.start) await script.start(this);
 
     const input = flags.input
       ? fs.createReadStream(flags.input)
       : process.stdin;
-    const rows = await parseCsv(input, {
+    let rows = await utils.parseCsv(input, {
       encoding,
       delimiter,
       quote,
       skiplines,
       trim,
       mapping,
-      convert,
+      convert: script.convert,
     });
+
+    if (script.finish) {
+      const result = await script.finish(rows, this);
+      if (result) rows = result;
+    }
 
     if (!this.jsonEnabled()) {
       const output = flags.output
@@ -86,9 +94,5 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     }
 
     return rows;
-  }
-
-  private async loadConverter(file: string) {
-    return (await loadScript(file)).convert;
   }
 }

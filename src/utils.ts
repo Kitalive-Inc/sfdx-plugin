@@ -81,9 +81,12 @@ export function parseCsv(
 }
 
 export type Converter = {
-  start?: (context: SfCommand<unknown>) => void;
+  start?: (context: SfCommand<unknown>) => Promise<void> | void;
   convert: (row: JsonMap) => JsonMap;
-  finish?: (rows: JsonMap[], context: SfCommand<unknown>) => JsonMap[];
+  finish?: (
+    rows: JsonMap[],
+    context: SfCommand<unknown>
+  ) => Promise<JsonMap[]> | JsonMap[];
 };
 export async function loadScript(file: string): Promise<Converter> {
   let script: Converter;
