@@ -71,7 +71,7 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     const input = flags.input
       ? fs.createReadStream(flags.input)
       : process.stdin;
-    let rows = await utils.parseCsv(input, {
+    let rows = await this.parseCsv(input, {
       encoding,
       delimiter,
       quote,
@@ -87,12 +87,50 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
     }
 
     if (!this.jsonEnabled()) {
-      const output = flags.output
-        ? fs.createWriteStream(flags.output)
-        : process.stdout;
-      csv.writeToStream(output, rows, { headers: true });
+      await this.saveCsv(flags.output, rows);
     }
 
     return rows;
+  }
+
+  public async parseCsv(
+    input: string | NodeJS.ReadableStream,
+    options?: {
+      encoding?: string;
+      delimiter?: string;
+      quote?: string;
+      skiplines?: number;
+      trim?: boolean;
+      mapping?: JsonMap;
+      convert?: (row: JsonMap) => JsonMap | null | undefined;
+    }
+  ): Promise<JsonMap[]> {
+    const { encoding, delimiter, quote, skiplines, trim, mapping, convert } =
+      options ?? {};
+    return utils.parseCsv(
+      typeof input === 'string' ? fs.createReadStream(input) : input,
+      {
+        encoding,
+        delimiter,
+        quote,
+        skiplines,
+        trim,
+        mapping,
+        convert,
+      }
+    );
+  }
+
+  public async saveCsv(
+    file: string | undefined,
+    rows: JsonMap[]
+  ): Promise<void> {
+    const output = file ? fs.createWriteStream(file) : process.stdout;
+    return new Promise((resolve, reject) => {
+      csv
+        .writeToStream(output, rows, { headers: true })
+        .on('error', reject)
+        .on('finish', resolve);
+    });
   }
 }
