@@ -1,6 +1,10 @@
 import { Connection, Messages, Org } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
-import soqlParser from '@jetstreamapp/soql-parser-js';
+import {
+  composeQuery,
+  getField,
+  parseQuery,
+} from '@jetstreamapp/soql-parser-js';
 import { Record } from '@jsforce/jsforce-node';
 import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
 import {
@@ -9,7 +13,6 @@ import {
   BulkResult,
   BulkOptions,
 } from '../../../../bulk.js';
-const { composeQuery, getField, parseQuery } = soqlParser;
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const bulkMessages = Messages.loadMessages(
@@ -75,7 +78,7 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       }
 
       const operation = flags.hard ? 'hardDelete' : 'delete';
-        const result = await this.bulkLoad(
+      const result = await this.bulkLoad(
         conn,
         query.sObject!,
         operation,
@@ -89,7 +92,9 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       if (!result) return;
 
       if (flags.wait) {
-        const numberRecordsProcessed = Number(result.job?.numberRecordsProcessed);
+        const numberRecordsProcessed = Number(
+          result.job?.numberRecordsProcessed
+        );
         const numberRecordsFailed = Number(result.job?.numberRecordsFailed);
         const errors = result.records
           .filter((r) => !r.success)
