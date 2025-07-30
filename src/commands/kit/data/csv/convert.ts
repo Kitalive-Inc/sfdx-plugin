@@ -22,7 +22,7 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
       summary: messages.getMessage('flags.input.summary'),
     }),
     output: Flags.string({
-      char: 'o', // eslint-disable-line sf-plugin/dash-o
+      char: 'f',
       summary: messages.getMessage('flags.output.summary'),
     }),
     encoding: Flags.string({
@@ -53,11 +53,20 @@ export default class CsvConvert extends SfCommand<JsonMap[]> {
       char: 'c',
       summary: messages.getMessage('flags.converter.summary'),
     }),
+    'target-org': Flags.optionalOrg(),
+    'api-version': Flags.orgApiVersion(),
   };
 
   public async run(): Promise<JsonMap[]> {
     const { flags } = await this.parse(CsvConvert);
     const { converter, encoding, delimiter, quote, skiplines, trim } = flags;
+
+    const org = flags['target-org'];
+    const conn = org?.getConnection(flags['api-version'] as string);
+    Object.defineProperties(this, {
+      org: { value: org },
+      conn: { value: conn },
+    });
 
     const mapping: JsonMap | undefined = flags.mapping
       ? ((await fs.readJson(flags.mapping)) as JsonMap)

@@ -38,7 +38,7 @@ describe('kit data csv convert', () => {
     saveCsv = $$.SANDBOX.stub(Command.prototype, 'saveCsv');
   });
 
-  const defaultArgs = ['-i', 'data/input.csv', '-o', 'data/output.csv'];
+  const defaultArgs = ['-i', 'data/input.csv', '-f', 'data/output.csv'];
   it(defaultArgs.join(' '), async () => {
     parseCsv.resolves(csvRows);
 
