@@ -34,7 +34,16 @@ export default class ScriptExecute extends SfCommand<void> {
   public async run(): Promise<void> {
     const { flags, argv } = await this.parse(ScriptExecute);
     const conn = flags['target-org']?.getConnection(flags['api-version']);
-    const require = createRequire(path.resolve(flags.file ?? './repl.js'));
+    const defaultRequire = createRequire(
+      path.resolve(flags.file ?? './repl.js')
+    );
+    const require = (name: string): unknown => {
+      try {
+        return createRequire(import.meta.resolve(name))(name);
+      } catch (e) {
+        return defaultRequire(name);
+      }
+    };
 
     if (flags.file) {
       const script = fs.readFileSync(flags.file).toString('utf8');
@@ -44,6 +53,7 @@ export default class ScriptExecute extends SfCommand<void> {
         context: this,
         conn,
         console,
+        process,
       });
       vm.runInContext('(async () => {\n' + script + '\n})();', vmContext, {
         filename: flags.file,
