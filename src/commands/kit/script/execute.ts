@@ -48,6 +48,7 @@ export default class ScriptExecute extends SfCommand<void> {
     if (flags.file) {
       const script = fs.readFileSync(flags.file).toString('utf8');
       const vmContext = vm.createContext({
+        ...global,
         require,
         argv: yargs([]).parse(argv as string[]),
         context: this,
