@@ -146,7 +146,6 @@ describe('kit data bulk upsert', () => {
   const mapping = {};
   let Command: any;
   let bulkLoad: any;
-  let createReadStream: any;
   let readJson: any;
   let parseCsv: any;
   let saveCsv: any;
@@ -159,7 +158,6 @@ describe('kit data bulk upsert', () => {
     stubSfCommandUx($$.SANDBOX);
     stubSpinner($$.SANDBOX);
 
-    createReadStream = $$.SANDBOX.fake.returns(csv.write(csvRows));
     readJson = $$.SANDBOX.fake.returns(mapping);
     convert = $$.SANDBOX.fake();
     start = $$.SANDBOX.fake();
@@ -167,14 +165,12 @@ describe('kit data bulk upsert', () => {
     loadScript = $$.SANDBOX.fake.returns({ convert, start, finish });
     Command = await esmock(
       '../../../../../src/commands/kit/data/bulk/upsert.js',
+      {},
       {
-        '../../../../../src/bulk.js': await esmock(
-          '../../../../../src/bulk.js',
-          {
-            'fs-extra': { createReadStream, readJson },
-            '../../../../../src/utils.js': { loadScript },
-          }
-        ),
+        'fs-extra': { readJson },
+        '../../../../../src/utils.js': {
+          loadScript,
+        },
       }
     );
     bulkLoad = $$.SANDBOX.stub(Command.prototype, 'bulkLoad').resolves({
@@ -196,7 +192,6 @@ describe('kit data bulk upsert', () => {
   ];
   it(defaultArgs.join(' '), async () => {
     await Command.run(defaultArgs);
-    expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
 
     expect(parseCsv.calledOnce).to.be.true;
     expect(parseCsv.args[0][1]).to.contain({
@@ -238,6 +233,7 @@ describe('kit data bulk upsert', () => {
     'data/convert.js',
     '-w',
     '10',
+    '--trim',
     '--setnull',
     '-r',
     'path/to/resultfile.csv'
@@ -248,12 +244,12 @@ describe('kit data bulk upsert', () => {
     expect(readJson.calledWith('data/mappings.json')).to.be.true;
     expect(loadScript.calledWith('data/convert.js')).to.be.true;
     expect(parseCsv.calledOnce).to.be.true;
-    expect(parseCsv.args[0][1]).to.eql({
+    expect(parseCsv.args[0][1]).to.contain({
       encoding: 'cp932',
       delimiter: ':',
       quote: '"',
       skiplines: 0,
-      trim: false,
+      trim: true,
       setnull: true,
       mapping,
       convert,

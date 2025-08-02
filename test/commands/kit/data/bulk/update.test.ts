@@ -2,7 +2,6 @@ import { expect } from 'chai';
 import esmock from 'esmock';
 import { MockTestOrgData, TestContext } from '@salesforce/core/testSetup';
 import { stubSfCommandUx, stubSpinner } from '@salesforce/sf-plugins-core';
-import * as csv from 'fast-csv';
 
 describe('kit data bulk update', () => {
   const $$ = new TestContext();
@@ -15,30 +14,21 @@ describe('kit data bulk update', () => {
 
   let Command: any;
   let bulkLoad: any;
-  let createReadStream: any;
+  let parseCsv: any;
   beforeEach(async () => {
     await $$.stubAuths(testOrg);
     stubSfCommandUx($$.SANDBOX);
     stubSpinner($$.SANDBOX);
 
-    createReadStream = $$.SANDBOX.fake.returns(csv.write(csvRows));
     Command = await esmock(
-      '../../../../../src/commands/kit/data/bulk/update.js',
-      {
-        '../../../../../src/bulk.js': await esmock(
-          '../../../../../src/bulk.js',
-          {
-            'fs-extra': { createReadStream },
-          }
-        ),
-      }
+      '../../../../../src/commands/kit/data/bulk/update.js'
     );
     bulkLoad = $$.SANDBOX.stub(Command.prototype, 'bulkLoad').resolves({
       job: {},
       records: [],
     });
     $$.SANDBOX.stub(Command.prototype, 'getFieldTypes').returns({});
-    $$.SANDBOX.stub(Command.prototype, 'parseCsv').resolves(csvRows);
+    parseCsv = $$.SANDBOX.stub(Command.prototype, 'parseCsv').resolves(csvRows);
     $$.SANDBOX.stub(Command.prototype, 'saveCsv');
   });
 
@@ -52,7 +42,7 @@ describe('kit data bulk update', () => {
   ];
   it(defaultArgs.join(' '), async () => {
     await Command.run(defaultArgs);
-    expect(createReadStream.calledWith('data/Contact.csv')).to.be.true;
+    expect(parseCsv.calledWith('data/Contact.csv')).to.be.true;
 
     expect(bulkLoad.calledOnce).to.be.true;
     expect(bulkLoad.args[0][1]).to.eq('Contact');

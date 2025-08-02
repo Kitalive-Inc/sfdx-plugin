@@ -2,6 +2,18 @@ import { expect } from 'chai';
 import esmock from 'esmock';
 import { TestContext } from '@salesforce/core/testSetup';
 import * as csv from 'fast-csv';
+import { normalizeDateString } from '../../../../../src/commands/kit/data/csv/convert.js';
+
+describe('normalizeDateString', () => {
+  it('null', () => {
+    // @ts-ignore
+    expect(normalizeDateString(null)).to.be.null;
+  });
+
+  it('2022/1/3', () => {
+    expect(normalizeDateString('2022/1/3', 'YYYY-MM-DD')).to.eq('2022-01-03');
+  });
+});
 
 describe('kit data csv convert', () => {
   const $$ = new TestContext();
