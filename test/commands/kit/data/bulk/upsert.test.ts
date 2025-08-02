@@ -217,11 +217,11 @@ describe('kit data bulk upsert', () => {
   const args = defaultArgs.concat(
     '-i',
     'Email',
-    '--concurrencymode',
+    '--concurrency-mode',
     'Serial',
-    '--assignmentruleid',
+    '--assignment-rule-id',
     'ruleId',
-    '--batchsize',
+    '--batch-size',
     '2',
     '-e',
     'cp932',
@@ -234,7 +234,7 @@ describe('kit data bulk upsert', () => {
     '-w',
     '10',
     '--trim',
-    '--setnull',
+    '--set-null',
     '-r',
     'path/to/resultfile.csv'
   );

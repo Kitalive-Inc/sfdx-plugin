@@ -8,6 +8,6 @@
 
   <%= config.bin %> <%= command.id %> -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -i MyExternalId__c -w 10
 
-# flags.externalid.summary
+# flags.external-id.summary
 
 The column name of the external ID

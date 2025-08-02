@@ -12,7 +12,7 @@ Bulk query records.
 
 SOQL query to export
 
-# flags.csvfile.summary
+# flags.csv-file.summary
 
 [default: standard output] Output csv file
 

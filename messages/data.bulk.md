@@ -16,27 +16,27 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 The SObject name to %s
 
-# flags.csvfile.summary
+# flags.csv-file.summary
 
 The CSV file path that defines the records to %s
 
-# flags.resultfile.summary
+# flags.result-file.summary
 
 The CSV file path for writing the %s results
 
-# flags.setnull.summary
+# flags.set-null.summary
 
 Set blank values as null values during %s operations (default: empty field values are ignored)
 
-# flags.convertonly.summary
+# flags.convert-only.summary
 
 Output converted.csv file and skip %s for debugging
 
-# flags.concurrencymode.summary
+# flags.concurrency-mode.summary
 
 The concurrency mode (Parallel or Serial) for the job
 
-# flags.batchsize.summary
+# flags.batch-size.summary
 
 The batch size of the job
 
@@ -44,7 +44,7 @@ The batch size of the job
 
 The number of minutes to wait for the command to complete before displaying the results
 
-# flags.assignmentruleid.summary
+# flags.assignment-rule-id.summary
 
 The ID of a specific assignment rule to run for a case or a lead
 

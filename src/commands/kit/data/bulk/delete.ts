@@ -39,16 +39,21 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
       default: false,
       summary: messages.getMessage('flags.hard.summary'),
     }),
-    concurrencymode: Flags.string({
+    'concurrency-mode': Flags.string({
       default: 'Parallel',
-      summary: bulkMessages.getMessage('flags.concurrencymode.summary'),
+      options: ['Serial', 'Parallel'],
+      summary: bulkMessages.getMessage('flags.concurrency-mode.summary'),
+      aliases: ['concurrencymode'],
+      deprecateAliases: true,
     }),
-    batchsize: Flags.integer({
+    'batch-size': Flags.integer({
       char: 's',
       min: 1,
       max: 10_000,
       default: 10_000,
-      summary: bulkMessages.getMessage('flags.batchsize.summary'),
+      summary: bulkMessages.getMessage('flags.batch-size.summary'),
+      aliases: ['batchsize'],
+      deprecateAliases: true,
     }),
     wait: Flags.integer({
       char: 'w',
@@ -84,8 +89,8 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
         operation,
         rows,
         {
-          concurrencyMode: flags.concurrencymode as 'Serial' | 'Parallel',
-          batchSize: flags.batchsize as number,
+          concurrencyMode: flags['concurrency-mode'] as 'Serial' | 'Parallel',
+          batchSize: flags['batch-size'] as number,
           wait: flags.wait as number,
         }
       );

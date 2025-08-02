@@ -24,9 +24,11 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       required: true,
       summary: messages.getMessage('flags.query.summary'),
     }),
-    csvfile: Flags.string({
+    'csv-file': Flags.string({
       char: 'f',
-      summary: messages.getMessage('flags.csvfile.summary'),
+      summary: messages.getMessage('flags.csv-file.summary'),
+      aliases: ['csvfile'],
+      deprecateAliases: true,
     }),
     all: Flags.boolean({
       summary: messages.getMessage('flags.all.summary'),
@@ -44,7 +46,7 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     const { flags } = await this.parse();
     const org = flags['target-org'] as Org;
     const conn = org.getConnection(flags['api-version'] as string);
-    const file = flags.csvfile as string;
+    const file = flags['csv-file'] as string;
 
     this.spinner.start('Bulk query');
     try {

@@ -32,7 +32,7 @@ The input CSV file delimiter
 
 The input CSV file quote character
 
-# flags.skiplines.summary
+# flags.skip-lines.summary
 
 The number of lines to skip
 

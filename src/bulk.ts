@@ -135,41 +135,56 @@ export function commonFlags(operation: IngestOperation) {
       summary: messages.getMessage('flags.sobject.summary', [operation]),
     }),
     // csv settings
-    csvfile: Flags.string({
+    'csv-file': Flags.string({
       char: 'f',
       required: true,
-      summary: messages.getMessage('flags.csvfile.summary', [operation]),
+      summary: messages.getMessage('flags.csv-file.summary', [operation]),
+      aliases: ['csvfile'],
+      deprecateAliases: true,
     }),
-    resultfile: Flags.string({
+    'result-file': Flags.string({
       char: 'r',
-      summary: messages.getMessage('flags.resultfile.summary', [operation]),
+      summary: messages.getMessage('flags.result-file.summary', [operation]),
+      aliases: ['resultfile'],
+      deprecateAliases: true,
     }),
     encoding: csvFlags.encoding,
     delimiter: csvFlags.delimiter,
     quote: csvFlags.quote,
-    skiplines: csvFlags.skiplines,
+    'skip-lines': csvFlags['skip-lines'],
     trim: csvFlags.trim,
     mapping: csvFlags.mapping,
     converter: csvFlags.converter,
-    setnull: Flags.boolean({
-      summary: messages.getMessage('flags.setnull.summary', [operation]),
+    'set-null': Flags.boolean({
+      summary: messages.getMessage('flags.set-null.summary', [operation]),
+      aliases: ['setnull'],
+      deprecateAliases: true,
     }),
-    convertonly: Flags.boolean({
-      summary: messages.getMessage('flags.convertonly.summary', [operation]),
+    'convert-only': Flags.boolean({
+      summary: messages.getMessage('flags.convert-only.summary', [operation]),
+      aliases: ['convertonly'],
+      deprecateAliases: true,
     }),
     // job settings
-    concurrencymode: Flags.string({
+    'concurrency-mode': Flags.string({
       default: 'Parallel',
-      summary: messages.getMessage('flags.concurrencymode.summary'),
+      summary: messages.getMessage('flags.concurrency-mode.summary'),
+      options: ['Serial', 'Parallel'],
+      aliases: ['concurrencymode'],
+      deprecateAliases: true,
     }),
-    assignmentruleid: Flags.string({
-      summary: messages.getMessage('flags.assignmentruleid.summary'),
+    'assignment-rule-id': Flags.string({
+      summary: messages.getMessage('flags.assignment-rule-id.summary'),
+      aliases: ['assignmentruleid'],
+      deprecateAliases: true,
     }),
-    batchsize: Flags.integer({
+    'batch-size': Flags.integer({
       min: 1,
       max: 10000,
       default: 10000,
-      summary: messages.getMessage('flags.batchsize.summary'),
+      summary: messages.getMessage('flags.batch-size.summary'),
+      aliases: ['batchsize'],
+      deprecateAliases: true,
     }),
     wait: Flags.integer({
       char: 'w',
@@ -193,21 +208,28 @@ export abstract class BulkCommand extends CsvCommand<BulkResult> {
     this.org = flags['target-org'];
     const conn = this.org!.getConnection(flags['api-version']);
     this.conn = conn;
-    const { sobject, csvfile, ...csvOptions } = flags;
+    const { sobject, 'csv-file': csvfile } = flags;
 
     const fieldTypes = await this.getFieldTypes(conn, sobject);
 
     this.spinner.start('Processing csv');
     try {
       let rows = await convertCsv(this, {
-        ...csvOptions,
         input: csvfile,
+        encoding: flags.encoding,
+        delimiter: flags.delimiter,
+        quote: flags.quote,
+        skiplines: flags['skip-lines'],
+        trim: flags.trim,
+        setnull: flags['set-null'],
+        mapping: flags.mapping,
+        converter: flags.converter,
         fieldTypes,
       });
 
       this.spinner.stop();
 
-      if (flags.convertonly) {
+      if (flags['convert-only']) {
         const base = path.basename(csvfile, path.extname(csvfile));
         await this.saveCsv(
           path.join(path.dirname(csvfile), base + '.converted.csv'),
@@ -218,10 +240,10 @@ export abstract class BulkCommand extends CsvCommand<BulkResult> {
 
       this.spinner.start(`Bulk ${this.operation}`);
       const result = await this.bulkLoad(conn, sobject, this.operation, rows, {
-        extIdField: flags.externalid,
-        concurrencyMode: flags.concurrencymode,
-        assignmentRuleId: flags.assignmentruleid,
-        batchSize: flags.batchsize,
+        extIdField: flags['external-id'],
+        concurrencyMode: flags['concurrency-mode'],
+        assignmentRuleId: flags['assignment-rule-id'],
+        batchSize: flags['batch-size'],
         wait: flags.wait,
       });
       if (!result) return;
@@ -262,7 +284,7 @@ export abstract class BulkCommand extends CsvCommand<BulkResult> {
         );
       }
 
-      if (flags.resultfile) await this.saveCsv(flags.resultfile, rows);
+      if (flags['result-file']) await this.saveCsv(flags['result-file'], rows);
 
       return result;
     } catch (e) {

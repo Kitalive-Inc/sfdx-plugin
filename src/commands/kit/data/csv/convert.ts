@@ -25,6 +25,7 @@ export type CsvConvertOptions = {
   quote?: string;
   skiplines?: number;
   trim?: boolean;
+  setnull?: boolean;
   mapping?: string;
   converter?: string;
   fieldTypes?: { [field: string]: string };
@@ -181,9 +182,11 @@ export default class CsvConvert extends CsvCommand<JsonMap[]> {
       default: '"',
       summary: messages.getMessage('flags.quote.summary'),
     }),
-    skiplines: Flags.integer({
+    'skip-lines': Flags.integer({
       default: 0,
-      summary: messages.getMessage('flags.skiplines.summary'),
+      summary: messages.getMessage('flags.skip-lines.summary'),
+      aliases: ['skiplines'],
+      deprecateAliases: true,
     }),
     trim: Flags.boolean({ summary: messages.getMessage('flags.trim.summary') }),
     mapping: Flags.string({
@@ -203,9 +206,18 @@ export default class CsvConvert extends CsvCommand<JsonMap[]> {
 
     this.org = flags['target-org'];
     this.conn = this.org?.getConnection(flags['api-version'] as string);
-    this.options = flags;
+    this.options = {
+      input: flags.input,
+      encoding: flags.encoding,
+      delimiter: flags.delimiter,
+      quote: flags.quote,
+      skiplines: flags['skip-lines'],
+      trim: flags.trim,
+      mapping: flags.mapping,
+      converter: flags.converter,
+    };
 
-    const rows = await convertCsv(this, flags);
+    const rows = await convertCsv(this, this.options);
     if (flags.output) {
       await this.saveCsv(flags.output, rows);
     } else if (!this.jsonEnabled()) {
