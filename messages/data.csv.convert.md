@@ -10,7 +10,7 @@ Convert CSV data using column mapping file or Node.js script.
 
 - Convert csv file using script and output to specified path:
 
-  <%= config.bin %> <%= command.id %> -i ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js
+  <%= config.bin %> <%= command.id %> -i ./path/to/input.csv -f ./path/to/output.csv -c ./path/to/convert.js
 
 # flags.input.summary
 
@@ -32,7 +32,7 @@ The input CSV file delimiter
 
 The input CSV file quote character
 
-# flags.skiplines.summary
+# flags.skip-lines.summary
 
 The number of lines to skip
 

@@ -2,12 +2,8 @@
 import path from 'path';
 import { Connection, Messages } from '@salesforce/core';
 import { Duration } from '@salesforce/kit';
-import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
+import { Flags } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
-import dayjs from 'dayjs';
-import * as csv from 'fast-csv';
-// @ts-ignore
-import fs from 'fs-extra';
 import { Record } from '@jsforce/jsforce-node';
 import {
   BatchInfo,
@@ -16,7 +12,10 @@ import {
   JobInfo,
 } from '@jsforce/jsforce-node/lib/api/bulk.js';
 import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
-import CsvConvertCommand from './commands/kit/data/csv/convert.js';
+import CsvConvertCommand, {
+  CsvCommand,
+  convertCsv,
+} from './commands/kit/data/csv/convert.js';
 import * as utils from './utils.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -126,17 +125,6 @@ export function bulkLoad(
   });
 }
 
-export function normalizeDateString(str: string, format?: string) {
-  if (!str) return str;
-  const d = dayjs(str);
-  return format ? d.format(format) : d.toISOString();
-}
-
-const converters = {
-  date: (value: string) => normalizeDateString(value, 'YYYY-MM-DD'),
-  datetime: normalizeDateString,
-};
-
 const csvFlags = CsvConvertCommand.flags;
 
 export function commonFlags(operation: IngestOperation) {
@@ -147,41 +135,56 @@ export function commonFlags(operation: IngestOperation) {
       summary: messages.getMessage('flags.sobject.summary', [operation]),
     }),
     // csv settings
-    csvfile: Flags.string({
+    'csv-file': Flags.string({
       char: 'f',
       required: true,
-      summary: messages.getMessage('flags.csvfile.summary', [operation]),
+      summary: messages.getMessage('flags.csv-file.summary', [operation]),
+      aliases: ['csvfile'],
+      deprecateAliases: true,
     }),
-    resultfile: Flags.string({
+    'result-file': Flags.string({
       char: 'r',
-      summary: messages.getMessage('flags.resultfile.summary', [operation]),
+      summary: messages.getMessage('flags.result-file.summary', [operation]),
+      aliases: ['resultfile'],
+      deprecateAliases: true,
     }),
     encoding: csvFlags.encoding,
     delimiter: csvFlags.delimiter,
     quote: csvFlags.quote,
-    skiplines: csvFlags.skiplines,
+    'skip-lines': csvFlags['skip-lines'],
     trim: csvFlags.trim,
     mapping: csvFlags.mapping,
     converter: csvFlags.converter,
-    setnull: Flags.boolean({
-      summary: messages.getMessage('flags.setnull.summary', [operation]),
+    'set-null': Flags.boolean({
+      summary: messages.getMessage('flags.set-null.summary', [operation]),
+      aliases: ['setnull'],
+      deprecateAliases: true,
     }),
-    convertonly: Flags.boolean({
-      summary: messages.getMessage('flags.convertonly.summary', [operation]),
+    'convert-only': Flags.boolean({
+      summary: messages.getMessage('flags.convert-only.summary', [operation]),
+      aliases: ['convertonly'],
+      deprecateAliases: true,
     }),
     // job settings
-    concurrencymode: Flags.string({
+    'concurrency-mode': Flags.string({
       default: 'Parallel',
-      summary: messages.getMessage('flags.concurrencymode.summary'),
+      summary: messages.getMessage('flags.concurrency-mode.summary'),
+      options: ['Serial', 'Parallel'],
+      aliases: ['concurrencymode'],
+      deprecateAliases: true,
     }),
-    assignmentruleid: Flags.string({
-      summary: messages.getMessage('flags.assignmentruleid.summary'),
+    'assignment-rule-id': Flags.string({
+      summary: messages.getMessage('flags.assignment-rule-id.summary'),
+      aliases: ['assignmentruleid'],
+      deprecateAliases: true,
     }),
-    batchsize: Flags.integer({
+    'batch-size': Flags.integer({
       min: 1,
       max: 10000,
       default: 10000,
-      summary: messages.getMessage('flags.batchsize.summary'),
+      summary: messages.getMessage('flags.batch-size.summary'),
+      aliases: ['batchsize'],
+      deprecateAliases: true,
     }),
     wait: Flags.integer({
       char: 'w',
@@ -193,7 +196,7 @@ export function commonFlags(operation: IngestOperation) {
   };
 }
 
-export abstract class BulkCommand extends SfCommand<BulkResult> {
+export abstract class BulkCommand extends CsvCommand<BulkResult> {
   public static description = messages.getMessage('description');
 
   public static requiresProject = false;
@@ -202,55 +205,31 @@ export abstract class BulkCommand extends SfCommand<BulkResult> {
 
   public async run(): Promise<BulkResult> {
     const { flags } = await this.parse();
-    const org = flags['target-org'];
-    const conn = org.getConnection(flags['api-version']);
-    Object.defineProperties(this, {
-      org: { value: org },
-      conn: { value: conn },
-    });
-    const {
-      sobject,
-      csvfile,
-      mapping,
-      converter,
-      encoding,
-      delimiter,
-      quote,
-      skiplines,
-      trim,
-      setnull,
-    } = flags;
+    this.org = flags['target-org'];
+    const conn = this.org!.getConnection(flags['api-version']);
+    this.conn = conn;
+    const { sobject, 'csv-file': csvfile } = flags;
 
-    const mappingJson = mapping ? await fs.readJson(mapping) : undefined;
-    const script = converter
-      ? await utils.loadScript(converter)
-      : ({} as utils.Converter);
     const fieldTypes = await this.getFieldTypes(conn, sobject);
 
     this.spinner.start('Processing csv');
     try {
-      if (script.start) await script.start(this);
-
-      let rows = await this.parseCsv(fs.createReadStream(csvfile), {
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim: !!trim,
-        setnull,
-        mapping: mappingJson,
-        convert: script.convert,
+      let rows = await convertCsv(this, {
+        input: csvfile,
+        encoding: flags.encoding,
+        delimiter: flags.delimiter,
+        quote: flags.quote,
+        skiplines: flags['skip-lines'],
+        trim: flags.trim,
+        setnull: flags['set-null'],
+        mapping: flags.mapping,
+        converter: flags.converter,
         fieldTypes,
       });
 
-      if (script.finish) {
-        const result = await script.finish(rows, this);
-        if (result) rows = result;
-      }
-
       this.spinner.stop();
 
-      if (flags.convertonly) {
+      if (flags['convert-only']) {
         const base = path.basename(csvfile, path.extname(csvfile));
         await this.saveCsv(
           path.join(path.dirname(csvfile), base + '.converted.csv'),
@@ -261,10 +240,10 @@ export abstract class BulkCommand extends SfCommand<BulkResult> {
 
       this.spinner.start(`Bulk ${this.operation}`);
       const result = await this.bulkLoad(conn, sobject, this.operation, rows, {
-        extIdField: flags.externalid,
-        concurrencyMode: flags.concurrencymode,
-        assignmentRuleId: flags.assignmentruleid,
-        batchSize: flags.batchsize,
+        extIdField: flags['external-id'],
+        concurrencyMode: flags['concurrency-mode'],
+        assignmentRuleId: flags['assignment-rule-id'],
+        batchSize: flags['batch-size'],
         wait: flags.wait,
       });
       if (!result) return;
@@ -299,85 +278,19 @@ export abstract class BulkCommand extends SfCommand<BulkResult> {
         this.log(
           messages.getMessage('asyncJob', [
             this.config.bin,
-            conn.username,
+            conn.getUsername(),
             result.job?.id,
           ])
         );
       }
 
-      if (flags.resultfile) await this.saveCsv(flags.resultfile, rows);
+      if (flags['result-file']) await this.saveCsv(flags['result-file'], rows);
 
       return result;
     } catch (e) {
       this.spinner.stop('error');
       throw e;
     }
-  }
-
-  public async parseCsv(
-    input: string | NodeJS.ReadableStream,
-    options?: {
-      encoding?: string;
-      delimiter?: string;
-      quote?: string;
-      skiplines?: number;
-      trim?: boolean;
-      setnull?: boolean;
-      mapping?: JsonMap;
-      convert?: (row: JsonMap) => JsonMap | null | undefined;
-      fieldTypes?: { [field: string]: string };
-    }
-  ): Promise<JsonMap[]> {
-    const {
-      encoding,
-      delimiter,
-      quote,
-      skiplines,
-      trim,
-      mapping,
-      convert,
-      setnull,
-      fieldTypes,
-    } = options ?? {};
-    return utils.parseCsv(
-      typeof input === 'string' ? fs.createReadStream(input) : input,
-      {
-        encoding,
-        delimiter,
-        quote,
-        skiplines,
-        trim,
-        mapping,
-        convert: (row) => {
-          const result = convert ? convert(row) : row;
-          if (!result) return;
-          if (fieldTypes) {
-            for (const key of Object.keys(result)) {
-              // @ts-ignore
-              const converter = converters[fieldTypes[key]];
-              if (converter) result[key] = converter(result[key]);
-            }
-          }
-          if (setnull) {
-            for (const key of Object.keys(result)) {
-              if (key.includes('.')) continue; // skip reference
-              if (result[key] == null || result[key] === '')
-                result[key] = '#N/A';
-            }
-          }
-          return result;
-        },
-      }
-    );
-  }
-
-  public async saveCsv(file: string, rows: Record[]): Promise<void> {
-    return new Promise((resolve, reject) => {
-      csv
-        .writeToPath(file, rows, { headers: true, writeBOM: true })
-        .on('error', reject)
-        .on('finish', resolve);
-    });
   }
 
   protected bulkLoad(

@@ -15,11 +15,13 @@ export default class UpsertCommand extends BulkCommand {
   public static flags = {
     ...BulkCommand.flags,
     ...commonFlags('upsert'),
-    externalid: Flags.string({
+    'external-id': Flags.string({
       char: 'i',
       required: true,
       default: 'Id',
-      summary: messages.getMessage('flags.externalid.summary'),
+      summary: messages.getMessage('flags.external-id.summary'),
+      aliases: ['externalid'],
+      deprecateAliases: true,
     }),
   };
 

@@ -285,7 +285,7 @@ FLAGS
   -e, --encoding=<value>   [default: utf8] The input CSV file encoding
   -i, --input=<value>      [default: standard input] The path of the input CSV file
   -m, --mapping=<value>    The path of the JSON file that defines CSV column mappings
-  -o, --output=<value>     [default: standard output] The path of the output CSV file
+  -f, --output=<value>     [default: standard output] The path of the output CSV file
   -q, --quote=<value>      [default: "] The input CSV file quote character
       --skiplines=<value>  The number of lines to skip
       --trim               Trim all white space from columns
