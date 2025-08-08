@@ -17,7 +17,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
 running command...
 $ sf (--version)
-@kitalive/sfdx-plugin/1.0.0-rc.2 darwin-arm64 node-v20.14.0
+@kitalive/sfdx-plugin/1.0.0-rc.3 darwin-arm64 node-v22.17.1
 $ sf --help [COMMAND]
 USAGE
   $ sf COMMAND
@@ -49,18 +49,20 @@ Bulk delete records by SOQL select query.
 
 ```
 USAGE
-  $ sf kit data bulk delete -q <value> -o <value> [--json] [--flags-dir <value>] [--hard] [--concurrencymode <value>] [-s
-    <value>] [-w <value>] [--api-version <value>]
+  $ sf kit data bulk delete -q <value> -o <value> [--json] [--flags-dir <value>] [--hard] [--concurrency-mode
+    Serial|Parallel] [-s <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
-  -o, --target-org=<value>       (required) Username or alias of the target org. Not required if the `target-org`
-                                 configuration variable is already set.
-  -q, --query=<value>            (required) SOQL query to delete
-  -s, --batchsize=<value>        [default: 10000] The batch size of the job
-  -w, --wait=<value>             The number of minutes to wait for the command to complete before displaying the results
-      --api-version=<value>      Override the api version used for api requests made by this command
-      --concurrencymode=<value>  [default: Parallel] The concurrency mode (Parallel or Serial) for the job
-      --hard                     Perform a hard delete
+  -o, --target-org=<value>         (required) Username or alias of the target org. Not required if the `target-org`
+                                   configuration variable is already set.
+  -q, --query=<value>              (required) SOQL query to delete
+  -s, --batch-size=<value>         [default: 10000] The batch size of the job
+  -w, --wait=<value>               The number of minutes to wait for the command to complete before displaying the
+                                   results
+      --api-version=<value>        Override the api version used for api requests made by this command
+      --concurrency-mode=<option>  [default: Parallel] The concurrency mode (Parallel or Serial) for the job
+                                   <options: Serial|Parallel>
+      --hard                       Perform a hard delete
 
 GLOBAL FLAGS
   --flags-dir=<value>  Import flag values from a directory.
@@ -72,7 +74,7 @@ EXAMPLES
     $ sf kit data bulk delete -q "SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:2"
 ```
 
-_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/bulk/delete.ts)_
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/bulk/delete.ts)_
 
 ## `sf kit data bulk insert`
 
@@ -80,36 +82,33 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk insert -s <value> -f <value> -o <value> [--json] [--flags-dir <value>] [-r <value>] [-e <value>] [-d
-    <value>] [-q <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly]
-    [--concurrencymode <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
+  $ sf kit data bulk insert -s <value> -f <value> -o <value> [-r <value>] [-e <value>] [-d <value>] [-q <value>]
+    [--skip-lines <value>] [--trim] [-m <value>] [-c <value>] [--set-null] [--convert-only] [--concurrency-mode
+    Serial|Parallel] [--assignment-rule-id <value>] [--batch-size <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
-  -c, --converter=<value>         The path of the script to convert CSV rows
-  -d, --delimiter=<value>         [default: ,] The input CSV file delimiter
-  -e, --encoding=<value>          [default: utf8] The input CSV file encoding
-  -f, --csvfile=<value>           (required) The CSV file path that defines the records to insert
-  -m, --mapping=<value>           The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>        (required) Username or alias of the target org. Not required if the `target-org`
-                                  configuration variable is already set.
-  -q, --quote=<value>             [default: "] The input CSV file quote character
-  -r, --resultfile=<value>        The CSV file path for writing the insert results
-  -s, --sobject=<value>           (required) The SObject name to insert
-  -w, --wait=<value>              The number of minutes to wait for the command to complete before displaying the
-                                  results
-      --api-version=<value>       Override the api version used for api requests made by this command
-      --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
-      --batchsize=<value>         [default: 10000] The batch size of the job
-      --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
-      --convertonly               Output converted.csv file and skip insert for debugging
-      --setnull                   Set blank values as null values during insert operations (default: empty field values
-                                  are ignored)
-      --skiplines=<value>         The number of lines to skip
-      --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --flags-dir=<value>  Import flag values from a directory.
-  --json               Format output as json.
+  -c, --converter=<value>           The path of the script to convert CSV rows
+  -d, --delimiter=<value>           [default: ,] The input CSV file delimiter
+  -e, --encoding=<value>            [default: utf8] The input CSV file encoding
+  -f, --csv-file=<value>            (required) The CSV file path that defines the records to insert
+  -m, --mapping=<value>             The path of the JSON file that defines CSV column mappings
+  -o, --target-org=<value>          (required) Username or alias of the target org. Not required if the `target-org`
+                                    configuration variable is already set.
+  -q, --quote=<value>               [default: "] The input CSV file quote character
+  -r, --result-file=<value>         The CSV file path for writing the insert results
+  -s, --sobject=<value>             (required) The SObject name to insert
+  -w, --wait=<value>                The number of minutes to wait for the command to complete before displaying the
+                                    results
+      --api-version=<value>         Override the api version used for api requests made by this command
+      --assignment-rule-id=<value>  The ID of a specific assignment rule to run for a case or a lead
+      --batch-size=<value>          [default: 10000] The batch size of the job
+      --concurrency-mode=<option>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
+                                    <options: Serial|Parallel>
+      --convert-only                Output converted.csv file and skip insert for debugging
+      --set-null                    Set blank values as null values during insert operations (default: empty field
+                                    values are ignored)
+      --skip-lines=<value>          The number of lines to skip
+      --trim                        Trim all white space from columns
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -121,12 +120,12 @@ EXAMPLES
 
     $ sf kit data bulk insert -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-  Insert MyObject__c records with convert.js:
+  %s MyObject__c records with convert.js:
 
     $ sf kit data bulk insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/bulk/insert.ts)_
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/bulk/insert.ts)_
 
 ## `sf kit data bulk query`
 
@@ -138,7 +137,7 @@ USAGE
     [--api-version <value>]
 
 FLAGS
-  -f, --csvfile=<value>      [default: standard output] Output csv file
+  -f, --csv-file=<value>     [default: standard output] Output csv file
   -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
                              configuration variable is already set.
   -q, --query=<value>        (required) SOQL query to export
@@ -157,7 +156,7 @@ EXAMPLES
     $ sf kit data bulk query -q "SELECT Id, Name FROM Account" -f ./path/to/Account.csv
 ```
 
-_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/bulk/query.ts)_
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/bulk/query.ts)_
 
 ## `sf kit data bulk update`
 
@@ -165,36 +164,33 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk update -s <value> -f <value> -o <value> [--json] [--flags-dir <value>] [-r <value>] [-e <value>] [-d
-    <value>] [-q <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull] [--convertonly]
-    [--concurrencymode <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>] [--api-version <value>]
+  $ sf kit data bulk update -s <value> -f <value> -o <value> [-r <value>] [-e <value>] [-d <value>] [-q <value>]
+    [--skip-lines <value>] [--trim] [-m <value>] [-c <value>] [--set-null] [--convert-only] [--concurrency-mode
+    Serial|Parallel] [--assignment-rule-id <value>] [--batch-size <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
-  -c, --converter=<value>         The path of the script to convert CSV rows
-  -d, --delimiter=<value>         [default: ,] The input CSV file delimiter
-  -e, --encoding=<value>          [default: utf8] The input CSV file encoding
-  -f, --csvfile=<value>           (required) The CSV file path that defines the records to update
-  -m, --mapping=<value>           The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>        (required) Username or alias of the target org. Not required if the `target-org`
-                                  configuration variable is already set.
-  -q, --quote=<value>             [default: "] The input CSV file quote character
-  -r, --resultfile=<value>        The CSV file path for writing the update results
-  -s, --sobject=<value>           (required) The SObject name to update
-  -w, --wait=<value>              The number of minutes to wait for the command to complete before displaying the
-                                  results
-      --api-version=<value>       Override the api version used for api requests made by this command
-      --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
-      --batchsize=<value>         [default: 10000] The batch size of the job
-      --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
-      --convertonly               Output converted.csv file and skip update for debugging
-      --setnull                   Set blank values as null values during update operations (default: empty field values
-                                  are ignored)
-      --skiplines=<value>         The number of lines to skip
-      --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --flags-dir=<value>  Import flag values from a directory.
-  --json               Format output as json.
+  -c, --converter=<value>           The path of the script to convert CSV rows
+  -d, --delimiter=<value>           [default: ,] The input CSV file delimiter
+  -e, --encoding=<value>            [default: utf8] The input CSV file encoding
+  -f, --csv-file=<value>            (required) The CSV file path that defines the records to update
+  -m, --mapping=<value>             The path of the JSON file that defines CSV column mappings
+  -o, --target-org=<value>          (required) Username or alias of the target org. Not required if the `target-org`
+                                    configuration variable is already set.
+  -q, --quote=<value>               [default: "] The input CSV file quote character
+  -r, --result-file=<value>         The CSV file path for writing the update results
+  -s, --sobject=<value>             (required) The SObject name to update
+  -w, --wait=<value>                The number of minutes to wait for the command to complete before displaying the
+                                    results
+      --api-version=<value>         Override the api version used for api requests made by this command
+      --assignment-rule-id=<value>  The ID of a specific assignment rule to run for a case or a lead
+      --batch-size=<value>          [default: 10000] The batch size of the job
+      --concurrency-mode=<option>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
+                                    <options: Serial|Parallel>
+      --convert-only                Output converted.csv file and skip update for debugging
+      --set-null                    Set blank values as null values during update operations (default: empty field
+                                    values are ignored)
+      --skip-lines=<value>          The number of lines to skip
+      --trim                        Trim all white space from columns
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -206,12 +202,12 @@ EXAMPLES
 
     $ sf kit data bulk update -o Account -f ./path/to/Account.csv -m ./path/to/mapping.json
 
-  Update MyObject__c records with convert.js:
+  %s MyObject__c records with convert.js:
 
     $ sf kit data bulk update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/bulk/update.ts)_
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/bulk/update.ts)_
 
 ## `sf kit data bulk upsert`
 
@@ -219,38 +215,34 @@ For information about CSV file formats, see [Prepare CSV Files](https://develope
 
 ```
 USAGE
-  $ sf kit data bulk upsert -s <value> -f <value> -o <value> -i <value> [--json] [--flags-dir <value>] [-r <value>] [-e
-    <value>] [-d <value>] [-q <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>] [--setnull]
-    [--convertonly] [--concurrencymode <value>] [--assignmentruleid <value>] [--batchsize <value>] [-w <value>]
-    [--api-version <value>]
+  $ sf kit data bulk upsert -s <value> -f <value> -o <value> -i <value> [-r <value>] [-e <value>] [-d <value>] [-q
+    <value>] [--skip-lines <value>] [--trim] [-m <value>] [-c <value>] [--set-null] [--convert-only] [--concurrency-mode
+    Serial|Parallel] [--assignment-rule-id <value>] [--batch-size <value>] [-w <value>] [--api-version <value>]
 
 FLAGS
-  -c, --converter=<value>         The path of the script to convert CSV rows
-  -d, --delimiter=<value>         [default: ,] The input CSV file delimiter
-  -e, --encoding=<value>          [default: utf8] The input CSV file encoding
-  -f, --csvfile=<value>           (required) The CSV file path that defines the records to upsert
-  -i, --externalid=<value>        (required) [default: Id] The column name of the external ID
-  -m, --mapping=<value>           The path of the JSON file that defines CSV column mappings
-  -o, --target-org=<value>        (required) Username or alias of the target org. Not required if the `target-org`
-                                  configuration variable is already set.
-  -q, --quote=<value>             [default: "] The input CSV file quote character
-  -r, --resultfile=<value>        The CSV file path for writing the upsert results
-  -s, --sobject=<value>           (required) The SObject name to upsert
-  -w, --wait=<value>              The number of minutes to wait for the command to complete before displaying the
-                                  results
-      --api-version=<value>       Override the api version used for api requests made by this command
-      --assignmentruleid=<value>  The ID of a specific assignment rule to run for a case or a lead
-      --batchsize=<value>         [default: 10000] The batch size of the job
-      --concurrencymode=<value>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
-      --convertonly               Output converted.csv file and skip upsert for debugging
-      --setnull                   Set blank values as null values during upsert operations (default: empty field values
-                                  are ignored)
-      --skiplines=<value>         The number of lines to skip
-      --trim                      Trim all white space from columns
-
-GLOBAL FLAGS
-  --flags-dir=<value>  Import flag values from a directory.
-  --json               Format output as json.
+  -c, --converter=<value>           The path of the script to convert CSV rows
+  -d, --delimiter=<value>           [default: ,] The input CSV file delimiter
+  -e, --encoding=<value>            [default: utf8] The input CSV file encoding
+  -f, --csv-file=<value>            (required) The CSV file path that defines the records to upsert
+  -i, --external-id=<value>         (required) [default: Id] The column name of the external ID
+  -m, --mapping=<value>             The path of the JSON file that defines CSV column mappings
+  -o, --target-org=<value>          (required) Username or alias of the target org. Not required if the `target-org`
+                                    configuration variable is already set.
+  -q, --quote=<value>               [default: "] The input CSV file quote character
+  -r, --result-file=<value>         The CSV file path for writing the upsert results
+  -s, --sobject=<value>             (required) The SObject name to upsert
+  -w, --wait=<value>                The number of minutes to wait for the command to complete before displaying the
+                                    results
+      --api-version=<value>         Override the api version used for api requests made by this command
+      --assignment-rule-id=<value>  The ID of a specific assignment rule to run for a case or a lead
+      --batch-size=<value>          [default: 10000] The batch size of the job
+      --concurrency-mode=<option>   [default: Parallel] The concurrency mode (Parallel or Serial) for the job
+                                    <options: Serial|Parallel>
+      --convert-only                Output converted.csv file and skip upsert for debugging
+      --set-null                    Set blank values as null values during upsert operations (default: empty field
+                                    values are ignored)
+      --skip-lines=<value>          The number of lines to skip
+      --trim                        Trim all white space from columns
 
 DESCRIPTION
   For information about CSV file formats, see [Prepare CSV
@@ -268,7 +260,7 @@ EXAMPLES
       -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sf kit data csv convert`
 
@@ -276,19 +268,21 @@ Convert CSV data using column mapping file or Node.js script.
 
 ```
 USAGE
-  $ sf kit data csv convert [--json] [--flags-dir <value>] [-i <value>] [-o <value>] [-e <value>] [-d <value>] [-q
-    <value>] [--skiplines <value>] [--trim] [-m <value>] [-c <value>]
+  $ sf kit data csv convert [--json] [--flags-dir <value>] [-i <value>] [-f <value>] [-e <value>] [-d <value>] [-q
+    <value>] [--skip-lines <value>] [--trim] [-m <value>] [-c <value>] [-o <value>] [--api-version <value>]
 
 FLAGS
-  -c, --converter=<value>  The path of the script to convert CSV rows
-  -d, --delimiter=<value>  [default: ,] The input CSV file delimiter
-  -e, --encoding=<value>   [default: utf8] The input CSV file encoding
-  -i, --input=<value>      [default: standard input] The path of the input CSV file
-  -m, --mapping=<value>    The path of the JSON file that defines CSV column mappings
-  -f, --output=<value>     [default: standard output] The path of the output CSV file
-  -q, --quote=<value>      [default: "] The input CSV file quote character
-      --skiplines=<value>  The number of lines to skip
-      --trim               Trim all white space from columns
+  -c, --converter=<value>    The path of the script to convert CSV rows
+  -d, --delimiter=<value>    [default: ,] The input CSV file delimiter
+  -e, --encoding=<value>     [default: utf8] The input CSV file encoding
+  -f, --output=<value>       [default: standard output] The path of the output CSV file
+  -i, --input=<value>        [default: standard input] The path of the input CSV file
+  -m, --mapping=<value>      The path of the JSON file that defines CSV column mappings
+  -o, --target-org=<value>   Username or alias of the target org.
+  -q, --quote=<value>        [default: "] The input CSV file quote character
+      --api-version=<value>  Override the api version used for api requests made by this command
+      --skip-lines=<value>   The number of lines to skip
+      --trim                 Trim all white space from columns
 
 GLOBAL FLAGS
   --flags-dir=<value>  Import flag values from a directory.
@@ -301,10 +295,10 @@ EXAMPLES
 
   Convert csv file using script and output to specified path:
 
-    $ sf kit data csv convert -i ./path/to/input.csv -o ./path/to/output.csv -c ./path/to/convert.js
+    $ sf kit data csv convert -i ./path/to/input.csv -f ./path/to/output.csv -c ./path/to/convert.js
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/data/csv/convert.ts)_
 
 ## `sf kit graphql editor`
 
@@ -312,9 +306,12 @@ Open the GraphQL Editor in a browser
 
 ```
 USAGE
-  $ sf kit graphql editor -o <value> [--json] [--flags-dir <value>] [-p <value>] [--api-version <value>]
+  $ sf kit graphql editor -o <value> [--json] [--flags-dir <value>] [-b chrome|firefox|edge] [-p <value>] [--api-version
+    <value>]
 
 FLAGS
+  -b, --browser=<option>     browser to use
+                             <options: chrome|firefox|edge>
   -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
                              configuration variable is already set.
   -p, --port=<value>         [default: 3000] local server port number
@@ -335,7 +332,7 @@ EXAMPLES
   $ sf kit graphql editor --port 8080
 ```
 
-_See code: [src/commands/kit/graphql/editor.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/graphql/editor.ts)_
+_See code: [src/commands/kit/graphql/editor.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/graphql/editor.ts)_
 
 ## `sf kit layout assignments deploy`
 
@@ -370,7 +367,7 @@ EXAMPLES
     $ sf kit layout assignments deploy -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sf kit layout assignments retrieve`
 
@@ -409,7 +406,7 @@ EXAMPLES
     $ sf kit layout assignments retrieve -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sf kit metadata dependencies`
 
@@ -417,9 +414,12 @@ Analyze metadata dependencies
 
 ```
 USAGE
-  $ sf kit metadata dependencies -o <value> [--json] [--flags-dir <value>] [-p <value>] [--api-version <value>]
+  $ sf kit metadata dependencies -o <value> [--json] [--flags-dir <value>] [-b chrome|firefox|edge] [-p <value>] [--api-version
+    <value>]
 
 FLAGS
+  -b, --browser=<option>     browser to use
+                             <options: chrome|firefox|edge>
   -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
                              configuration variable is already set.
   -p, --port=<value>         [default: 3000] local server port number
@@ -433,7 +433,7 @@ EXAMPLES
   $ sf kit metadata dependencies
 ```
 
-_See code: [src/commands/kit/metadata/dependencies.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/metadata/dependencies.ts)_
+_See code: [src/commands/kit/metadata/dependencies.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/metadata/dependencies.ts)_
 
 ## `sf kit object fields describe`
 
@@ -465,7 +465,7 @@ EXAMPLES
     $ sf kit object fields describe -o me@my.org -s CustomObject__c --json
 ```
 
-_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/object/fields/describe.ts)_
+_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/object/fields/describe.ts)_
 
 ## `sf kit object fields setup`
 
@@ -499,7 +499,7 @@ EXAMPLES
     $ sf kit object fields setup -o me@my.org -s CustomObject__c -f path/to/custom_object_fields.csv --delete
 ```
 
-_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/object/fields/setup.ts)_
+_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/object/fields/setup.ts)_
 
 ## `sf kit script`
 
@@ -593,5 +593,5 @@ EXAMPLES
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.2/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0-rc.3/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
