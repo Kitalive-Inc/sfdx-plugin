@@ -56,12 +56,23 @@ export default class ScriptExecute extends SfCommand<void> {
         console,
         process,
       });
-      vm.runInContext('(async () => {\n' + script + '\n})();', vmContext, {
-        filename: flags.file,
-        lineOffset: -1,
-        // @ts-ignore
-        importModuleDynamically: vm.constants?.USE_MAIN_CONTEXT_DEFAULT_LOADER,
-      });
+      try {
+        await vm.runInContext(
+          '(async () => {\n' + script + '\n})();',
+          vmContext,
+          {
+            filename: flags.file,
+            lineOffset: -1,
+            importModuleDynamically:
+              // @ts-ignore
+              vm.constants?.USE_MAIN_CONTEXT_DEFAULT_LOADER,
+          }
+        );
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+        throw new Error(`${(e as Error).name} has occurred`);
+      }
     } else {
       this.log(messages.getMessage('repl.start'));
 
