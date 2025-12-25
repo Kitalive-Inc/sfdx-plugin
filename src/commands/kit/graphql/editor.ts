@@ -8,6 +8,28 @@ const messages = Messages.loadMessages(
   'graphql.editor'
 );
 
+// avoid GraphQL introspection parsing errors
+function fixInstospectionSchema(graphqlResponse: object): object {
+  const res = graphqlResponse as {
+    data?: {
+      __schema?: {
+        directives?: Array<{
+          name?: string;
+          args?: unknown[];
+        }>;
+      };
+    };
+  };
+  // eslint-disable-next-line no-underscore-dangle
+  const deprecated = res.data?.__schema?.directives?.find(
+    ({ name }) => name === 'deprecated'
+  );
+  if (deprecated) {
+    deprecated.args = [];
+  }
+  return res;
+}
+
 export default class GraphqlEditor extends ServerCommand {
   public static readonly summary = messages.getMessage('summary');
   public static readonly description = messages.getMessage('description');
@@ -28,7 +50,11 @@ export default class GraphqlEditor extends ServerCommand {
       });
 
       app.post('/api/graphql', async (req, res) => {
-        res.json(await conn.requestPost(endpoint, req.body as object));
+        res.json(
+          fixInstospectionSchema(
+            await conn.requestPost(endpoint, req.body as object)
+          )
+        );
       });
     });
   }
