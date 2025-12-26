@@ -1,5 +1,4 @@
 import express from 'express';
-import 'express-async-errors';
 import open, { apps } from 'open';
 
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
