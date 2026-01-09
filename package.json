@@ -14,7 +14,7 @@
     "express": "^5.2.1",
     "fast-csv": "^5.0.5",
     "fs-extra": "^11.3.3",
-    "iconv-lite": "^0.6.3",
+    "iconv-lite": "^0.7.2",
     "open": "^11",
     "tslib": "^2",
     "yargs": "^18.0.0"
