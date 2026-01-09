@@ -17,7 +17,7 @@ $ npm install -g @kitalive/sfdx-plugin
 $ sf COMMAND
 running command...
 $ sf (--version)
-@kitalive/sfdx-plugin/1.0.0 darwin-arm64 node-v22.17.1
+@kitalive/sfdx-plugin/1.0.1 darwin-arm64 node-v22.17.1
 $ sf --help [COMMAND]
 USAGE
   $ sf COMMAND
@@ -74,7 +74,7 @@ EXAMPLES
     $ sf kit data bulk delete -q "SELECT Id FROM Opportunity WHERE CloseDate < LAST_N_YEARS:2"
 ```
 
-_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/bulk/delete.ts)_
+_See code: [src/commands/kit/data/bulk/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/bulk/delete.ts)_
 
 ## `sf kit data bulk insert`
 
@@ -125,7 +125,7 @@ EXAMPLES
     $ sf kit data bulk insert -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/bulk/insert.ts)_
+_See code: [src/commands/kit/data/bulk/insert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/bulk/insert.ts)_
 
 ## `sf kit data bulk query`
 
@@ -156,7 +156,7 @@ EXAMPLES
     $ sf kit data bulk query -q "SELECT Id, Name FROM Account" -f ./path/to/Account.csv
 ```
 
-_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/bulk/query.ts)_
+_See code: [src/commands/kit/data/bulk/query.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/bulk/query.ts)_
 
 ## `sf kit data bulk update`
 
@@ -207,7 +207,7 @@ EXAMPLES
     $ sf kit data bulk update -o MyObject__c -f ./path/to/MyObject__c.csv -c ./path/to/convert.js -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/bulk/update.ts)_
+_See code: [src/commands/kit/data/bulk/update.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/bulk/update.ts)_
 
 ## `sf kit data bulk upsert`
 
@@ -260,7 +260,7 @@ EXAMPLES
       -w 10
 ```
 
-_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/bulk/upsert.ts)_
+_See code: [src/commands/kit/data/bulk/upsert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/bulk/upsert.ts)_
 
 ## `sf kit data csv convert`
 
@@ -298,7 +298,7 @@ EXAMPLES
     $ sf kit data csv convert -i ./path/to/input.csv -f ./path/to/output.csv -c ./path/to/convert.js
 ```
 
-_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/data/csv/convert.ts)_
+_See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/data/csv/convert.ts)_
 
 ## `sf kit graphql editor`
 
@@ -332,7 +332,7 @@ EXAMPLES
   $ sf kit graphql editor --port 8080
 ```
 
-_See code: [src/commands/kit/graphql/editor.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/graphql/editor.ts)_
+_See code: [src/commands/kit/graphql/editor.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/graphql/editor.ts)_
 
 ## `sf kit layout assignments deploy`
 
@@ -367,7 +367,7 @@ EXAMPLES
     $ sf kit layout assignments deploy -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/layout/assignments/deploy.ts)_
+_See code: [src/commands/kit/layout/assignments/deploy.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/layout/assignments/deploy.ts)_
 
 ## `sf kit layout assignments retrieve`
 
@@ -406,7 +406,7 @@ EXAMPLES
     $ sf kit layout assignments retrieve -o me@my.org -f config/layout-assignments.sandbox.json
 ```
 
-_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/layout/assignments/retrieve.ts)_
+_See code: [src/commands/kit/layout/assignments/retrieve.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/layout/assignments/retrieve.ts)_
 
 ## `sf kit metadata dependencies`
 
@@ -433,7 +433,7 @@ EXAMPLES
   $ sf kit metadata dependencies
 ```
 
-_See code: [src/commands/kit/metadata/dependencies.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/metadata/dependencies.ts)_
+_See code: [src/commands/kit/metadata/dependencies.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/metadata/dependencies.ts)_
 
 ## `sf kit object fields describe`
 
@@ -465,7 +465,7 @@ EXAMPLES
     $ sf kit object fields describe -o me@my.org -s CustomObject__c --json
 ```
 
-_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/object/fields/describe.ts)_
+_See code: [src/commands/kit/object/fields/describe.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/object/fields/describe.ts)_
 
 ## `sf kit object fields setup`
 
@@ -499,7 +499,7 @@ EXAMPLES
     $ sf kit object fields setup -o me@my.org -s CustomObject__c -f path/to/custom_object_fields.csv --delete
 ```
 
-_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/object/fields/setup.ts)_
+_See code: [src/commands/kit/object/fields/setup.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/object/fields/setup.ts)_
 
 ## `sf kit script`
 
@@ -593,5 +593,5 @@ EXAMPLES
   > await conn.query('SELECT Id, Name FROM Account LIMIT 1')
 ```
 
-_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.0/src/commands/kit/script/execute.ts)_
+_See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.0.1/src/commands/kit/script/execute.ts)_
 <!-- commandsstop -->
