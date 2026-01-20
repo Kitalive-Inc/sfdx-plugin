@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pipeline } from 'node:stream';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
 import * as csv from 'fast-csv';
@@ -91,7 +91,7 @@ export type Converter = {
 export async function loadScript(file: string): Promise<Converter> {
   let script: Converter;
   try {
-    script = (await import(path.resolve(file))) as Converter;
+    script = (await import(pathToFileURL(file).href)) as Converter;
   } catch (e: unknown) {
     throw new Error((e as Error).stack);
   }
