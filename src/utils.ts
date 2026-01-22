@@ -42,40 +42,45 @@ export function parseCsv(
 ): Promise<JsonMap[]> {
   const { encoding, delimiter, quote, skiplines, trim, mapping, convert } =
     options ?? {};
+  if (!input) throw new Error('csv input is required');
   return new Promise((resolve, reject) => {
-    const mapper = mapping ? columnMapper(mapping) : undefined;
+    try {
+      const mapper = mapping ? columnMapper(mapping) : undefined;
 
-    let lines = 2;
-    const rows: JsonMap[] = [];
-    const parser = csv
-      .parse({
-        headers: true,
-        ignoreEmpty: true,
-        delimiter: delimiter === '\\t' ? '\t' : delimiter ?? ',',
-        quote: quote ?? '"',
-        skipLines: skiplines,
-        trim,
-      })
-      .on('data', (row: JsonMap) => {
-        try {
-          if (mapper) row = mapper(row);
-          const r = convert ? convert(row) : row;
-          if (r) rows.push(r);
-          lines++;
-        } catch (e) {
-          throw new Error(
-            `A error occurred in csv file at line ${lines}: ${
-              (e as Error).message
-            }\ndata: ${JSON.stringify(row)}`
-          );
-        }
-      });
+      let lines = 2;
+      const rows: JsonMap[] = [];
+      const parser = csv
+        .parse({
+          headers: true,
+          ignoreEmpty: true,
+          delimiter: delimiter === '\\t' ? '\t' : delimiter ?? ',',
+          quote: quote ?? '"',
+          skipLines: skiplines,
+          trim,
+        })
+        .on('data', (row: JsonMap) => {
+          try {
+            if (mapper) row = mapper(row);
+            const r = convert ? convert(row) : row;
+            if (r) rows.push(r);
+            lines++;
+          } catch (e) {
+            throw new Error(
+              `A error occurred in csv file at line ${lines}: ${
+                (e as Error).message
+              }\ndata: ${JSON.stringify(row)}`
+            );
+          }
+        });
 
-    const callback = (e: unknown): void => (e ? reject(e) : resolve(rows));
-    if (!encoding || encoding === 'utf8') {
-      pipeline(input, parser, callback);
-    } else {
-      pipeline(input, iconv.decodeStream(encoding), parser, callback);
+      const callback = (e: unknown): void => (e ? reject(e) : resolve(rows));
+      if (!encoding || encoding === 'utf8') {
+        pipeline(input, parser, callback);
+      } else {
+        pipeline(input, iconv.decodeStream(encoding), parser, callback);
+      }
+    } catch (e) {
+      reject(e);
     }
   });
 }

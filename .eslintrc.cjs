@@ -19,6 +19,7 @@ module.exports = {
     complexity: 'warn',
     header: 'off',
     'import/no-extraneous-dependencies': 'off',
+    'no-console': ['error', { allow: ['warn', 'error'] }],
     'no-param-reassign': 'off',
     'sf-plugin/only-extend-SfCommand': 'off',
   },

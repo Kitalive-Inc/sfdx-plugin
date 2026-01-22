@@ -69,7 +69,6 @@ export default class ScriptExecute extends SfCommand<void> {
           }
         );
       } catch (e) {
-        // eslint-disable-next-line no-console
         console.error(e);
         throw new Error(`${(e as Error).name} has occurred`);
       }

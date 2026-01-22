@@ -65,28 +65,33 @@ export async function convertCsv(
   cmd: CsvConvertContext,
   options: CsvConvertOptions
 ): Promise<JsonMap[]> {
-  const { input, mapping, converter, ...csvOptions } = options;
-  const mappingJson = mapping
-    ? ((await fs.readJson(mapping)) as JsonMap)
-    : undefined;
-  const script = converter
-    ? await utils.loadScript(converter)
-    : ({} as utils.Converter);
+  try {
+    const { input, mapping, converter, ...csvOptions } = options;
+    const mappingJson = mapping
+      ? ((await fs.readJson(mapping)) as JsonMap)
+      : undefined;
+    const script = converter
+      ? await utils.loadScript(converter)
+      : ({} as utils.Converter);
 
-  if (script.start) await script.start(cmd);
+    if (script.start) await script.start(cmd);
 
-  let rows = await cmd.parseCsv(input ?? process.stdin, {
-    ...csvOptions,
-    mapping: mappingJson,
-    convert: script.convert,
-  });
+    let rows = await cmd.parseCsv(input ?? process.stdin, {
+      ...csvOptions,
+      mapping: mappingJson,
+      convert: script.convert,
+    });
 
-  if (script.finish) {
-    const result = await script.finish(rows, cmd);
-    if (result) rows = result;
+    if (script.finish) {
+      const result = await script.finish(rows, cmd);
+      if (result) rows = result;
+    }
+
+    return rows;
+  } catch (e) {
+    console.error(e);
+    throw new Error(`${(e as Error).name} has occurred`);
   }
-
-  return rows;
 }
 
 // eslint-disable-next-line sf-plugin/command-example,sf-plugin/command-summary
