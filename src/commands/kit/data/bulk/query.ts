@@ -21,8 +21,12 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
   public static readonly flags = {
     query: Flags.string({
       char: 'q',
-      required: true,
+      exactlyOne: ['query', 'query-file'],
       summary: messages.getMessage('flags.query.summary'),
+    }),
+    'query-file': Flags.string({
+      exactlyOne: ['query', 'query-file'],
+      summary: messages.getMessage('flags.query-file.summary'),
     }),
     'csv-file': Flags.string({
       char: 'f',
@@ -47,10 +51,14 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     const org = flags['target-org'] as Org;
     const conn = org.getConnection(flags['api-version'] as string);
     const file = flags['csv-file'] as string;
+    const query = this.getQuery(
+      flags.query as string | undefined,
+      flags['query-file'] as string | undefined
+    );
 
     this.spinner.start('Bulk query');
     try {
-      const rows = await this.bulkQuery(conn, flags.query as string, {
+      const rows = await this.bulkQuery(conn, query, {
         all: flags.all as boolean,
         wait: flags.wait as number,
       });
@@ -76,6 +84,10 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
 
   public writeCsv(rows: Record[], stream: Writable) {
     write(rows, { headers: true, writeBOM: true }).pipe(stream);
+  }
+
+  public getQuery(query?: string, queryFile?: string): string {
+    return query ?? fs.readFileSync(queryFile as string).toString('utf8');
   }
 
   public bulkQuery(conn: Connection, query: string, options: QueryOptions) {

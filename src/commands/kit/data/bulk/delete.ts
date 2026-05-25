@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { Connection, Messages, Org } from '@salesforce/core';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import {
@@ -32,8 +33,12 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
   public static readonly flags = {
     query: Flags.string({
       char: 'q',
-      required: true,
+      exactlyOne: ['query', 'query-file'],
       summary: messages.getMessage('flags.query.summary'),
+    }),
+    'query-file': Flags.string({
+      exactlyOne: ['query', 'query-file'],
+      summary: messages.getMessage('flags.query-file.summary'),
     }),
     hard: Flags.boolean({
       default: false,
@@ -69,7 +74,12 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     const { flags } = await this.parse();
     const org = flags['target-org'] as Org;
     const conn = org.getConnection(flags['api-version'] as string);
-    const query = parseQuery(flags.query as string);
+    const query = parseQuery(
+      this.getQuery(
+        flags.query as string | undefined,
+        flags['query-file'] as string | undefined
+      )
+    );
     query.fields = [getField('Id')];
     const soql = composeQuery(query);
 
@@ -134,6 +144,10 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
 
   public bulkQuery(conn: Connection, query: string) {
     return bulkQuery(conn, query);
+  }
+
+  public getQuery(query?: string, queryFile?: string): string {
+    return query ?? fs.readFileSync(queryFile as string).toString('utf8');
   }
 
   public bulkLoad(
