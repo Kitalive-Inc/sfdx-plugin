@@ -7,6 +7,7 @@ describe('kit data bulk query', () => {
   const $$ = new TestContext();
   const testOrg = new MockTestOrgData();
   const validQuery = 'SELECT Id FROM Account';
+  const relationshipQuery = 'SELECT Id, Owner.Name, Owner.Email FROM Account';
   const emptyQuery = 'SELECT Id FROM Contact';
   const invalidQuery = 'invalid';
 
@@ -19,7 +20,15 @@ describe('kit data bulk query', () => {
       (conn, query) => {
         switch (query) {
           case validQuery:
-            return Promise.resolve([{ Id: 'id1' }]);
+            return Promise.resolve([{ Id: 'id1', Name: 'name1' }]);
+          case relationshipQuery:
+            return Promise.resolve([
+              {
+                Id: 'id1',
+                'Owner.Name': 'user1',
+                'Owner.Email': 'user1@example.com',
+              },
+            ]);
           case emptyQuery:
             return Promise.resolve([]);
           default:
@@ -33,6 +42,109 @@ describe('kit data bulk query', () => {
     await Command.run(['-o', 'test@foo.bar', '-q', validQuery]);
     expect(bulkQuery.args[0][1]).to.eq(validQuery);
     expect(spinner.stop.args[0][0]).to.eq('1 records');
+  });
+
+  it('outputs object field labels', async () => {
+    const writeCsv = $$.SANDBOX.stub(Command.prototype, 'writeCsv');
+    $$.SANDBOX.stub(Command.prototype, 'getFieldLabels').resolves(
+      new Map([
+        ['Id', 'Account ID'],
+        ['Name', 'Account Name'],
+      ])
+    );
+
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-q',
+      validQuery,
+      '--object-field-label',
+    ]);
+    expect(writeCsv.args[0][0]).to.eql([
+      { 'Account ID': 'id1', 'Account Name': 'name1' },
+    ]);
+  });
+
+  it('outputs field label mappings', async () => {
+    const writeCsv = $$.SANDBOX.stub(Command.prototype, 'writeCsv');
+    $$.SANDBOX.stub(Command.prototype, 'readFieldLabelMappings').returns({
+      Id: 'Record ID',
+    });
+
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-q',
+      validQuery,
+      '--field-label-mapping',
+      'path/to/field-label-mapping.json',
+    ]);
+    expect(writeCsv.args[0][0]).to.eql([{ 'Record ID': 'id1', Name: 'name1' }]);
+  });
+
+  it('field label mappings override object field labels', async () => {
+    const writeCsv = $$.SANDBOX.stub(Command.prototype, 'writeCsv');
+    $$.SANDBOX.stub(Command.prototype, 'getFieldLabels').resolves(
+      new Map([
+        ['Id', 'Account ID'],
+        ['Name', 'Custom Name'],
+      ])
+    );
+
+    await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-q',
+      validQuery,
+      '--object-field-label',
+      '--field-label-mapping',
+      'path/to/field-label-mapping.json',
+    ]);
+    expect(writeCsv.args[0][0]).to.eql([
+      { 'Account ID': 'id1', 'Custom Name': 'name1' },
+    ]);
+  });
+
+  it('outputs json with field labels', async () => {
+    $$.SANDBOX.stub(Command.prototype, 'getFieldLabels').resolves(
+      new Map([['Id', 'Account ID']])
+    );
+
+    const result = await Command.run([
+      '-o',
+      'test@foo.bar',
+      '-q',
+      validQuery,
+      '--field-label-mapping',
+      'path/to/field-label-mapping.json',
+      '--json',
+    ]);
+    expect(result).to.eql([{ 'Account ID': 'id1', Name: 'name1' }]);
+  });
+
+  it('rejects duplicated output field labels', async () => {
+    $$.SANDBOX.stub(Command.prototype, 'getFieldLabels').resolves(
+      new Map([
+        ['Id', 'Same Label'],
+        ['Name', 'Same Label'],
+      ])
+    );
+
+    try {
+      await Command.run([
+        '-o',
+        'test@foo.bar',
+        '-q',
+        validQuery,
+        '--field-label-mapping',
+        'path/to/field-label-mapping.json',
+      ]);
+      expect.fail('No error occurred');
+    } catch (e) {
+      expect((e as Error).message).to.contain(
+        'Duplicated output field name: Same Label'
+      );
+    }
   });
 
   it('query file', async () => {
@@ -111,5 +223,59 @@ describe('kit data bulk query', () => {
         '--query-file cannot also be provided when using --query'
       );
     }
+  });
+});
+
+describe('kit data bulk query field labels', () => {
+  const command = Object.create(Command.prototype) as Command;
+  const objectInfo = {
+    fields: [
+      { name: 'Id', label: 'Account ID' },
+      { name: 'Name', label: 'Account Name' },
+      { name: 'OwnerId', label: 'Owner ID', relationshipName: 'Owner' },
+    ],
+  };
+
+  it('resolves object field labels', async () => {
+    const labels = await command.getFieldLabels(
+      { describe: async () => objectInfo } as any,
+      'SELECT Id, Name FROM Account',
+      true
+    );
+    expect([...labels.entries()]).to.eql([
+      ['Id', 'Account ID'],
+      ['Name', 'Account Name'],
+    ]);
+  });
+
+  it('resolves relationship name labels only for relationship Name fields', async () => {
+    const labels = await command.getFieldLabels(
+      { describe: async () => objectInfo } as any,
+      'SELECT Id, Owner.Name, Owner.Email FROM Account',
+      true
+    );
+    expect([...labels.entries()]).to.eql([
+      ['Id', 'Account ID'],
+      ['Owner.Name', 'Owner'],
+    ]);
+  });
+
+  it('overrides object field labels with field label mappings', async () => {
+    const commandWithMappings = Object.assign(
+      Object.create(Command.prototype),
+      {
+        readFieldLabelMappings: () => ({ Name: 'Custom Name' }),
+      }
+    ) as Command;
+    const labels = await commandWithMappings.getFieldLabels(
+      { describe: async () => objectInfo } as any,
+      'SELECT Id, Name FROM Account',
+      true,
+      'path/to/field-label-mapping.json'
+    );
+    expect([...labels.entries()]).to.eql([
+      ['Id', 'Account ID'],
+      ['Name', 'Custom Name'],
+    ]);
   });
 });

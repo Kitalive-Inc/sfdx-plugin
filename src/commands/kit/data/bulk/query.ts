@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import { Writable } from 'node:stream';
 import { Connection, Messages, Org } from '@salesforce/core';
 import { write } from '@fast-csv/format';
-import { Record } from '@jsforce/jsforce-node';
+import { Record as JsforceRecord } from '@jsforce/jsforce-node';
 import { Flags, SfCommand } from '@salesforce/sf-plugins-core';
 import { JsonMap } from '@salesforce/ts-types';
+import { getFlattenedFields, parseQuery } from '@jetstreamapp/soql-parser-js';
 import { bulkQuery, QueryOptions } from '../../../../bulk.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -33,6 +34,12 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       summary: messages.getMessage('flags.csv-file.summary'),
       aliases: ['csvfile'],
       deprecateAliases: true,
+    }),
+    'object-field-label': Flags.boolean({
+      summary: messages.getMessage('flags.object-field-label.summary'),
+    }),
+    'field-label-mapping': Flags.string({
+      summary: messages.getMessage('flags.field-label-mapping.summary'),
     }),
     all: Flags.boolean({
       summary: messages.getMessage('flags.all.summary'),
@@ -69,20 +76,35 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
 
       this.spinner.stop(`${rows.length} records`);
 
+      const objectFieldLabel = flags['object-field-label'] as boolean;
+      const fieldLabelMapping = flags['field-label-mapping'] as
+        | string
+        | undefined;
+      const fieldLabels =
+        objectFieldLabel || fieldLabelMapping
+          ? await this.getFieldLabels(
+              conn,
+              query,
+              objectFieldLabel,
+              fieldLabelMapping
+            )
+          : new Map<string, string>();
+      const outputRows = this.applyFieldLabels(rows, fieldLabels);
+
       if (file) {
-        this.writeCsv(rows, fs.createWriteStream(file));
+        this.writeCsv(outputRows, fs.createWriteStream(file));
       } else if (!this.jsonEnabled()) {
-        this.writeCsv(rows, process.stdout);
+        this.writeCsv(outputRows, process.stdout);
       }
 
-      return rows;
+      return outputRows;
     } catch (e) {
       this.spinner.stop('error');
       throw e;
     }
   }
 
-  public writeCsv(rows: Record[], stream: Writable) {
+  public writeCsv(rows: JsonMap[], stream: Writable) {
     write(rows, { headers: true, writeBOM: true }).pipe(stream);
   }
 
@@ -90,7 +112,111 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     return query ?? fs.readFileSync(queryFile as string).toString('utf8');
   }
 
+  public async getFieldLabels(
+    conn: Connection,
+    soql: string,
+    useObjectFieldLabel: boolean,
+    mappingFile?: string
+  ): Promise<Map<string, string>> {
+    const parsedQuery = parseQuery(soql);
+    const labels = new Map<string, string>();
+
+    if (useObjectFieldLabel) {
+      const objectInfo = await conn.describe(parsedQuery.sObject as string);
+      const fields = objectInfo.fields as Array<{
+        name: string;
+        label: string;
+        relationshipName?: string | null;
+      }>;
+      const fieldMap = new Map(fields.map((field) => [field.name, field]));
+      const relationshipFieldMap = new Map(
+        fields
+          .filter((field) => field.relationshipName)
+          .map((field) => [field.relationshipName as string, field])
+      );
+
+      for (const fieldName of getFlattenedFields(parsedQuery)) {
+        const field = fieldMap.get(fieldName);
+        if (field) {
+          labels.set(fieldName, field.label);
+          continue;
+        }
+
+        const relationshipName = fieldName.match(/^(.+)\.Name$/)?.[1];
+        const relationshipField =
+          relationshipName && relationshipFieldMap.get(relationshipName);
+        if (relationshipField) {
+          labels.set(fieldName, relationshipField.label.replace(/ ID$/, ''));
+        }
+      }
+    }
+
+    if (mappingFile) {
+      for (const [fieldName, label] of Object.entries(
+        this.readFieldLabelMappings(mappingFile)
+      )) {
+        labels.set(fieldName, label);
+      }
+    }
+
+    return labels;
+  }
+
+  public readFieldLabelMappings(file: string): { [key: string]: string } {
+    const mappings = JSON.parse(fs.readFileSync(file).toString('utf8')) as
+      | { [key: string]: unknown }
+      | unknown[];
+    if (
+      !mappings ||
+      Array.isArray(mappings) ||
+      typeof mappings !== 'object' ||
+      Object.values(mappings).some((value) => typeof value !== 'string')
+    ) {
+      throw new Error(
+        messages.getMessage('errors.invalidFieldLabelMapping', [file])
+      );
+    }
+
+    return mappings as { [key: string]: string };
+  }
+
+  public applyFieldLabels(
+    rows: JsforceRecord[],
+    labels: Map<string, string>
+  ): JsonMap[] {
+    if (!labels.size) return rows as JsonMap[];
+
+    const duplicatedLabel = this.findDuplicatedLabel(
+      Object.keys(rows[0]).map(
+        (fieldName) => labels.get(fieldName) ?? fieldName
+      )
+    );
+    if (duplicatedLabel) {
+      throw new Error(
+        messages.getMessage('errors.duplicatedFieldLabel', [duplicatedLabel])
+      );
+    }
+
+    return rows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([fieldName, value]) => [
+          labels.get(fieldName) ?? fieldName,
+          value,
+        ])
+      )
+    ) as JsonMap[];
+  }
+
   public bulkQuery(conn: Connection, query: string, options: QueryOptions) {
     return bulkQuery(conn, query, options);
+  }
+
+  private findDuplicatedLabel(labels: string[]): string | undefined {
+    const seen = new Set<string>();
+    return labels.find((label) => {
+      if (seen.has(label)) return true;
+      seen.add(label);
+      return false;
+    });
   }
 }
