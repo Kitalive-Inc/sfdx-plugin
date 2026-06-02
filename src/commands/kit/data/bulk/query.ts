@@ -62,6 +62,20 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
       flags.query as string | undefined,
       flags['query-file'] as string | undefined
     );
+    const objectFieldLabel = flags['object-field-label'] as boolean;
+    const fieldLabelMapping = flags['field-label-mapping'] as
+      | string
+      | undefined;
+    const fieldLabels =
+      objectFieldLabel || fieldLabelMapping
+        ? await this.getFieldLabels(
+            conn,
+            query,
+            objectFieldLabel,
+            fieldLabelMapping
+          )
+        : new Map<string, string>();
+    this.validateFieldLabels(query, fieldLabels);
 
     this.spinner.start('Bulk query');
     try {
@@ -76,19 +90,6 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
 
       this.spinner.stop(`${rows.length} records`);
 
-      const objectFieldLabel = flags['object-field-label'] as boolean;
-      const fieldLabelMapping = flags['field-label-mapping'] as
-        | string
-        | undefined;
-      const fieldLabels =
-        objectFieldLabel || fieldLabelMapping
-          ? await this.getFieldLabels(
-              conn,
-              query,
-              objectFieldLabel,
-              fieldLabelMapping
-            )
-          : new Map<string, string>();
       const outputRows = this.applyFieldLabels(rows, fieldLabels);
 
       if (file) {
@@ -186,17 +187,6 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
   ): JsonMap[] {
     if (!labels.size) return rows as JsonMap[];
 
-    const duplicatedLabel = this.findDuplicatedLabel(
-      Object.keys(rows[0]).map(
-        (fieldName) => labels.get(fieldName) ?? fieldName
-      )
-    );
-    if (duplicatedLabel) {
-      throw new Error(
-        messages.getMessage('errors.duplicatedFieldLabel', [duplicatedLabel])
-      );
-    }
-
     return rows.map((row) =>
       Object.fromEntries(
         Object.entries(row).map(([fieldName, value]) => [
@@ -207,16 +197,44 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     ) as JsonMap[];
   }
 
+  public validateFieldLabels(soql: string, labels: Map<string, string>) {
+    if (!labels.size) return;
+
+    const duplicatedLabels = this.findDuplicatedLabels(
+      getFlattenedFields(parseQuery(soql)).map((fieldName) => ({
+        fieldName,
+        label: labels.get(fieldName) ?? fieldName,
+      }))
+    );
+    if (duplicatedLabels.length) {
+      throw new Error(
+        messages.getMessage('errors.duplicatedFieldLabel', [
+          duplicatedLabels
+            .map(
+              ({ label, fieldNames }) => `${label} (${fieldNames.join(', ')})`
+            )
+            .join('; '),
+        ])
+      );
+    }
+  }
+
   public bulkQuery(conn: Connection, query: string, options: QueryOptions) {
     return bulkQuery(conn, query, options);
   }
 
-  private findDuplicatedLabel(labels: string[]): string | undefined {
-    const seen = new Set<string>();
-    return labels.find((label) => {
-      if (seen.has(label)) return true;
-      seen.add(label);
-      return false;
-    });
+  private findDuplicatedLabels(
+    fields: Array<{ fieldName: string; label: string }>
+  ): Array<{ label: string; fieldNames: string[] }> {
+    const fieldNamesByLabel = new Map<string, string[]>();
+    for (const { fieldName, label } of fields) {
+      const fieldNames = fieldNamesByLabel.get(label) ?? [];
+      fieldNames.push(fieldName);
+      fieldNamesByLabel.set(label, fieldNames);
+    }
+
+    return [...fieldNamesByLabel.entries()]
+      .filter(([, fieldNames]) => fieldNames.length > 1)
+      .map(([label, fieldNames]) => ({ label, fieldNames }));
   }
 }

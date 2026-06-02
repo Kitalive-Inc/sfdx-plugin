@@ -6,7 +6,9 @@ import Command from '../../../../../src/commands/kit/data/bulk/query.js';
 describe('kit data bulk query', () => {
   const $$ = new TestContext();
   const testOrg = new MockTestOrgData();
-  const validQuery = 'SELECT Id FROM Account';
+  const validQuery = 'SELECT Id, Name FROM Account';
+  const duplicatedLabelsQuery =
+    'SELECT Id, Name, Owner.Name, CreatedBy.Name FROM Account';
   const relationshipQuery = 'SELECT Id, Owner.Name, Owner.Email FROM Account';
   const emptyQuery = 'SELECT Id FROM Contact';
   const invalidQuery = 'invalid';
@@ -21,6 +23,15 @@ describe('kit data bulk query', () => {
         switch (query) {
           case validQuery:
             return Promise.resolve([{ Id: 'id1', Name: 'name1' }]);
+          case duplicatedLabelsQuery:
+            return Promise.resolve([
+              {
+                Id: 'id1',
+                Name: 'name1',
+                'Owner.Name': 'owner1',
+                'CreatedBy.Name': 'creator1',
+              },
+            ]);
           case relationshipQuery:
             return Promise.resolve([
               {
@@ -127,6 +138,8 @@ describe('kit data bulk query', () => {
       new Map([
         ['Id', 'Same Label'],
         ['Name', 'Same Label'],
+        ['Owner.Name', 'User'],
+        ['CreatedBy.Name', 'User'],
       ])
     );
 
@@ -135,15 +148,17 @@ describe('kit data bulk query', () => {
         '-o',
         'test@foo.bar',
         '-q',
-        validQuery,
+        duplicatedLabelsQuery,
         '--field-label-mapping',
         'path/to/field-label-mapping.json',
       ]);
       expect.fail('No error occurred');
     } catch (e) {
       expect((e as Error).message).to.contain(
-        'Duplicated output field name: Same Label'
+        'Duplicated output field names: Same Label (Id, Name); User (Owner.Name, CreatedBy.Name)'
       );
+      expect(bulkQuery.called).to.be.false;
+      expect(spinner.start.called).to.be.false;
     }
   });
 

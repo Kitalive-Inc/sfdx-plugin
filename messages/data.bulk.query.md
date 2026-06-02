@@ -50,7 +50,7 @@ Invalid field label mapping file: %s
 
 # errors.duplicatedFieldLabel
 
-Duplicated output field name: %s
+Duplicated output field names: %s
 
 # flags.wait.summary
 
