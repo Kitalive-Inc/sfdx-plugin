@@ -11,7 +11,10 @@ import {
   BulkOptions as JobOptions,
   JobInfo,
 } from '@jsforce/jsforce-node/lib/api/bulk.js';
-import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
+import {
+  IngestOperation,
+  QueryJobV2,
+} from '@jsforce/jsforce-node/lib/api/bulk2.js';
 import CsvConvertCommand, {
   CsvCommand,
   convertCsv,
@@ -49,18 +52,66 @@ export type QueryOptions = {
   wait?: number;
 };
 
+type BulkQueryResultJob = {
+  id: string;
+  locator?: string;
+  createQueryRequest: (request: {
+    method: 'GET';
+    path: string;
+    headers: { Accept: 'text/csv' };
+  }) => Promise<Record[]>;
+};
+
+export async function bulkQueryResults(
+  job: BulkQueryResultJob
+): Promise<Record[]> {
+  const records: Record[] = [];
+  let locator: string | undefined;
+
+  do {
+    const path = locator
+      ? `/${job.id}/results?locator=${encodeURIComponent(locator)}`
+      : `/${job.id}/results`;
+    const page = await job.createQueryRequest({
+      method: 'GET',
+      path,
+      headers: { Accept: 'text/csv' },
+    });
+    records.push(...page);
+    locator = job.locator;
+  } while (locator && locator !== 'null');
+
+  return records;
+}
+
 export async function bulkQuery(
   conn: Connection,
   query: string,
   options?: QueryOptions
 ): Promise<Record[]> {
   const wait = options?.wait ?? 5;
-  conn.bulk2.pollTimeout = Duration.minutes(wait).milliseconds;
-  const result = await conn.bulk2.query(
-    query,
-    options?.all ? { scanAll: true } : {}
-  );
-  return result.toArray();
+  const job = new QueryJobV2(conn, {
+    bodyParams: {
+      query,
+      operation: options?.all ? 'queryAll' : 'query',
+    },
+    pollingOptions: {
+      pollInterval: conn.bulk2.pollInterval,
+      pollTimeout: Duration.minutes(wait).milliseconds,
+    },
+  } as never);
+
+  try {
+    await job.open();
+    await job.poll(
+      conn.bulk2.pollInterval,
+      Duration.minutes(wait).milliseconds
+    );
+    return bulkQueryResults(job as unknown as BulkQueryResultJob);
+  } catch (error) {
+    job.delete().catch(() => undefined);
+    throw error;
+  }
 }
 
 export function bulkLoad(
@@ -123,6 +174,109 @@ export function bulkLoad(
       await job.close();
     }
   });
+}
+
+const MAX_PENDING_BATCHES = 5;
+
+export async function bulkLoadStream(
+  conn: Connection,
+  sobject: string,
+  operation: IngestOperation,
+  rows: AsyncIterable<Record>,
+  options?: BulkOptions
+): Promise<BulkResult> {
+  const { batchSize = 10000, wait, ...jobOptions } = options || {};
+  let job: ReturnType<typeof conn.bulk.createJob> | undefined;
+  const failures: BulkIngestBatchResult = [];
+  const pending = new Set<Promise<void>>();
+  let batchError: unknown;
+  let jobClosed = false;
+
+  const closeJob = async () => {
+    if (!job || jobClosed) return undefined;
+    jobClosed = true;
+    return job.close();
+  };
+
+  const executeBatch = (batchRows: Record[]) =>
+    new Promise<BulkIngestBatchResult>((resolve, reject) => {
+      const batch = job!.createBatch();
+
+      batch.on('error', reject);
+      batch.on('queue', () => {
+        batch
+          .check()
+          .then((result) => {
+            if (result.state === 'Failed') {
+              reject(new Error(result.stateMessage));
+            } else if (wait) {
+              batch.poll(5000, wait * 60000);
+            } else {
+              resolve([]);
+            }
+          })
+          .catch(reject);
+      });
+      batch.on('response', resolve);
+      batch.execute(batchRows);
+    });
+
+  const submitBatch = async (batchRows: Record[]) => {
+    const result = await executeBatch(batchRows);
+    if (wait) failures.push(...result.filter((record) => !record.success));
+  };
+
+  const enqueueBatch = async (batchRows: Record[]) => {
+    if (!job) {
+      job = conn.bulk.createJob(sobject, operation, jobOptions as JobOptions);
+    }
+
+    if (!wait) {
+      await submitBatch(batchRows);
+      return;
+    }
+
+    const pendingBatch = submitBatch(batchRows);
+    pending.add(pendingBatch);
+    pendingBatch.then(
+      () => pending.delete(pendingBatch),
+      (error: unknown) => {
+        pending.delete(pendingBatch);
+        batchError ??= error;
+      }
+    );
+
+    if (pending.size >= MAX_PENDING_BATCHES) {
+      await Promise.race(pending);
+      if (batchError) throw batchError;
+    }
+  };
+
+  try {
+    let batchRows: Record[] = [];
+    for await (const row of rows) {
+      batchRows.push(row);
+      if (batchRows.length === batchSize) {
+        await enqueueBatch(batchRows);
+        batchRows = [];
+      }
+    }
+    if (batchRows.length) await enqueueBatch(batchRows);
+
+    await Promise.all(pending);
+    if (batchError) throw batchError;
+
+    if (!job) return undefined;
+    return {
+      job: await closeJob(),
+      records: failures,
+    };
+  } catch (error) {
+    await Promise.allSettled(pending);
+    throw error;
+  } finally {
+    await closeJob();
+  }
 }
 
 const csvFlags = CsvConvertCommand.flags;

@@ -8,12 +8,12 @@ import {
 } from '@jetstreamapp/soql-parser-js';
 import { Record } from '@jsforce/jsforce-node';
 import { IngestOperation } from '@jsforce/jsforce-node/lib/api/bulk2.js';
-import {
-  bulkLoad,
-  bulkQuery,
-  BulkResult,
-  BulkOptions,
-} from '../../../../bulk.js';
+import { bulkLoadStream, BulkResult, BulkOptions } from '../../../../bulk.js';
+
+type QueryPage = {
+  nextRecordsUrl?: string;
+  records: Record[];
+};
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const bulkMessages = Messages.loadMessages(
@@ -86,25 +86,22 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     this.spinner.start(flags.hard ? 'Bulk hard delete' : 'Bulk delete');
 
     try {
-      const rows = await this.bulkQuery(conn, soql);
-      if (!rows.length) {
-        this.spinner.stop('no records');
-        return { records: [] };
-      }
-
       const operation = flags.hard ? 'hardDelete' : 'delete';
-      const result = await this.bulkLoad(
+      const result = await this.bulkLoadStream(
         conn,
         query.sObject!,
         operation,
-        rows,
+        this.bulkQuery(conn, soql),
         {
           concurrencyMode: flags['concurrency-mode'] as 'Serial' | 'Parallel',
           batchSize: flags['batch-size'] as number,
           wait: flags.wait as number,
         }
       );
-      if (!result) return;
+      if (!result) {
+        this.spinner.stop('no records');
+        return { records: [] };
+      }
 
       if (flags.wait) {
         const numberRecordsProcessed = Number(
@@ -142,21 +139,31 @@ export default class DeleteCommand extends SfCommand<BulkResult> {
     }
   }
 
-  public bulkQuery(conn: Connection, query: string) {
-    return bulkQuery(conn, query);
+  public async *bulkQuery(
+    conn: Connection,
+    query: string
+  ): AsyncIterable<Record> {
+    let url = `/query?q=${encodeURIComponent(query)}`;
+
+    do {
+      // eslint-disable-next-line no-await-in-loop
+      const page: QueryPage = await conn.requestGet(url);
+      yield* page.records;
+      url = page.nextRecordsUrl ?? '';
+    } while (url);
   }
 
   public getQuery(query?: string, queryFile?: string): string {
     return query ?? fs.readFileSync(queryFile as string).toString('utf8');
   }
 
-  public bulkLoad(
+  public bulkLoadStream(
     conn: Connection,
     sobject: string,
     operation: IngestOperation,
-    rows: Record[],
+    rows: AsyncIterable<Record>,
     options?: BulkOptions
   ) {
-    return bulkLoad(conn, sobject, operation, rows, options);
+    return bulkLoadStream(conn, sobject, operation, rows, options);
   }
 }
