@@ -35,6 +35,9 @@ USAGE
 * [`sf kit data bulk update`](#sf-kit-data-bulk-update)
 * [`sf kit data bulk upsert`](#sf-kit-data-bulk-upsert)
 * [`sf kit data csv convert`](#sf-kit-data-csv-convert)
+* [`sf kit flow deactivate`](#sf-kit-flow-deactivate)
+* [`sf kit flow delete`](#sf-kit-flow-delete)
+* [`sf kit flow generate`](#sf-kit-flow-generate)
 * [`sf kit graphql editor`](#sf-kit-graphql-editor)
 * [`sf kit layout assignments deploy`](#sf-kit-layout-assignments-deploy)
 * [`sf kit layout assignments retrieve`](#sf-kit-layout-assignments-retrieve)
@@ -43,6 +46,7 @@ USAGE
 * [`sf kit object fields setup`](#sf-kit-object-fields-setup)
 * [`sf kit script`](#sf-kit-script)
 * [`sf kit script execute`](#sf-kit-script-execute)
+* [`sf kit source delta`](#sf-kit-source-delta)
 
 ## `sf kit cmdt generate records`
 
@@ -355,6 +359,88 @@ EXAMPLES
 
 _See code: [src/commands/kit/data/csv/convert.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/data/csv/convert.ts)_
 
+## `sf kit flow deactivate`
+
+Deactivate Flow definitions
+
+```
+USAGE
+  $ sf kit flow deactivate -n <value>... -o <value> [--json] [--flags-dir <value>] [--api-version <value>]
+
+FLAGS
+  -n, --name=<value>...      (required) Flow API name. Specify the flag multiple times to deactivate multiple Flows.
+  -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
+                             configuration variable is already set.
+      --api-version=<value>  Override the api version used for api requests made by this command
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit flow deactivate --target-org my-org --name Flow1 --name Flow2
+```
+
+_See code: [src/commands/kit/flow/deactivate.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/flow/deactivate.ts)_
+
+## `sf kit flow delete`
+
+Delete Flows and all their versions
+
+```
+USAGE
+  $ sf kit flow delete -n <value>... -o <value> [--json] [--flags-dir <value>] [--api-version <value>]
+    [--keep-latest-version | --inactive-versions]
+
+FLAGS
+  -n, --name=<value>...      (required) Flow API name. Specify the flag multiple times to delete multiple Flows.
+  -o, --target-org=<value>   (required) Username or alias of the target org. Not required if the `target-org`
+                             configuration variable is already set.
+      --api-version=<value>  Override the api version used for api requests made by this command
+      --inactive-versions   Delete only inactive Flow versions and keep the active version.
+      --keep-latest-version Keep the latest Flow version even when it is inactive.
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit flow delete --target-org my-org --name Flow1 --name Flow2
+
+  $ sf kit flow delete --target-org my-org --keep-latest-version --name Flow1 --name Flow2
+
+  $ sf kit flow delete --target-org my-org --inactive-versions --name Flow1 --name Flow2
+```
+
+_See code: [src/commands/kit/flow/delete.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/flow/delete.ts)_
+
+## `sf kit flow generate`
+
+Generate a minimal draft Flow metadata file
+
+```
+USAGE
+  $ sf kit flow generate -n <value> -t <value> [--json] [--flags-dir <value>] [-l <value>]
+    [--api-version <value>] [-d <value>] [--force]
+
+FLAGS
+  -d, --output-dir=<value>    [default: .] Directory in which the Flow metadata file is generated.
+  -l, --label=<value>         Flow label. Defaults to the Flow API name.
+  -n, --name=<value>          (required) Flow API name.
+  -t, --process-type=<value>  (required) Flow processType value.
+      --api-version=<value>   Metadata API version. Defaults to the current API version.
+      --force                 Overwrite the Flow metadata file if it already exists.
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit flow generate --name Test --label Test --process-type Flow --api-version 67.0 --output-dir output/flows
+```
+
+_See code: [src/commands/kit/flow/generate.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/flow/generate.ts)_
+
 ## `sf kit graphql editor`
 
 Open the GraphQL Editor in a browser
@@ -649,4 +735,36 @@ EXAMPLES
 ```
 
 _See code: [src/commands/kit/script/execute.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/script/execute.ts)_
+
+## `sf kit source delta`
+
+Generate a Git delta deployment with unsupported CustomField type conversion handling
+
+The output directory contains `deploymentInstructions.md`, including fields with potential data loss, optional CSV backup commands, and the deployment commands.
+
+```
+USAGE
+  $ sf kit source delta -f <value> [--json] [--flags-dir <value>] [-d <value>] [--force] [--verbose] [-o
+    <value>] [--api-version <value>]
+
+FLAGS
+  -d, --output-dir=<value>              [default: output] Directory in which deploy and preDeploy artifacts are
+                                        generated.
+  -f, --from=<value>                    (required) Git revision from which the diff is generated.
+  -o, --target-org=<value>              Username or alias of the target org.
+      --api-version=<value>             Override the api version used for api requests made by this command
+      --force                           Delete and recreate the output directory if it already exists.
+      --verbose                         Output Tooling API query criteria and results used to resolve CustomFields.
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit source delta --from origin/main --target-org my-org
+
+  $ sf kit source delta --from HEAD~1 --target-org my-org
+```
+
+_See code: [src/commands/kit/source/delta.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.1.0/src/commands/kit/source/delta.ts)_
 <!-- commandsstop -->
