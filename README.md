@@ -47,6 +47,7 @@ USAGE
 * [`sf kit script`](#sf-kit-script)
 * [`sf kit script execute`](#sf-kit-script-execute)
 * [`sf kit source delta`](#sf-kit-source-delta)
+* [`sf kit source edit-references`](#sf-kit-source-edit-references)
 
 ## `sf kit cmdt generate records`
 
@@ -764,4 +765,33 @@ EXAMPLES
 ```
 
 _See code: [src/commands/kit/source/delta.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.2.0-rc.0/src/commands/kit/source/delta.ts)_
+
+## `sf kit source edit-references`
+
+Add explicitly selected field-reference edits to an existing source delta
+
+```
+USAGE
+  $ sf kit source edit-references -f <value> --field <value>... -p <value>... [--json] [--flags-dir <value>]
+    [-d <value>] [-o <value>] [--force]
+
+FLAGS
+  -d, --output-dir=<value>  [default: output] Existing source delta output directory to update.
+  -f, --from=<value>        (required) Git revision from which the pre-deploy source is read.
+  -o, --target-org=<value>  Org alias or username written to the regenerated deployment instructions. No org connection is made.
+  -p, --path=<value>...     (required) Repository-relative metadata path to edit. May be specified multiple times.
+      --field=<value>...    (required) CustomField API name whose references are removed. May be specified multiple times.
+      --force               Overwrite explicitly selected source files already present in preDeploy.
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit source edit-references --from origin/main --field Account.Value__c --path force-app/main/default/flexipages/Account_Record_Page.flexipage-meta.xml --target-org production
+
+  $ sf kit source edit-references --from HEAD~1 --field Account.Value__c --path force-app/main/default/classes/UsesValue.cls --force
+```
+
+_See code: [src/commands/kit/source/edit-references.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.2.0-rc.0/src/commands/kit/source/edit-references.ts)_
 <!-- commandsstop -->

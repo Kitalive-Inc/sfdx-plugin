@@ -618,6 +618,49 @@ describe('source delta', () => {
     expect(preDestructive).to.include('<members>Account.Value__c</members>');
   });
 
+  it('does not restore an edited dependency scheduled for deletion', async () => {
+    const flexiPath =
+      'force-app/main/default/flexipages/Account.flexipage-meta.xml';
+    execFileSync('git', ['rm', '-q', flexiPath], { cwd: root });
+    execFileSync('git', ['commit', '-qm', 'delete flexipage'], { cwd: root });
+    const metadataList = async ({ type }: { type: string }) => {
+      if (type === 'FlexiPage')
+        return [{ id: '0M0000000000001', fullName: 'Account' }];
+      return [];
+    };
+    const connection = sourceDeltaConnection(metadataList, [
+      {
+        MetadataComponentId: '0M0000000000001',
+        MetadataComponentType: 'FlexiPage',
+        RefMetadataComponentId: '00N000000000001',
+      },
+    ]);
+
+    const result = await generateSourceDelta({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD~2',
+      outputDirectory: path.join(root, 'output'),
+      apiVersion: '66.0',
+      connection,
+    });
+
+    expect(result.hardBlockers).to.deep.equal([]);
+    const preDeployFlexi = await fs.readFile(
+      path.join(root, 'output/preDeploy', flexiPath),
+      'utf8'
+    );
+    expect(preDeployFlexi).not.to.include('<itemInstances>');
+    const deployPackage = await fs.readFile(result.manifests.package, 'utf8');
+    expect(deployPackage).not.to.include('<name>FlexiPage</name>');
+    const postDestructive = await fs.readFile(
+      result.manifests.postDestructive!,
+      'utf8'
+    );
+    expect(postDestructive).to.include('<members>Account</members>');
+    expect(postDestructive).to.include('<name>FlexiPage</name>');
+  });
+
   it('copies directly dependent Apex triggers without editing them', async () => {
     const metadataList = async ({ type }: { type: string }) => {
       if (type === 'ApexTrigger')

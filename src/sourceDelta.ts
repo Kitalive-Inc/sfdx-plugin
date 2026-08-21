@@ -62,6 +62,16 @@ export type SourceDeltaResult = {
   };
 };
 
+export type SourceReferenceEditResult = {
+  outputDirectory: string;
+  deploymentInstructions: string;
+  paths: Array<{ path: string; changed: boolean }>;
+  manualReview: ManualReview[];
+  warnings: string[];
+  deploySteps: string[];
+  manifests: SourceDeltaResult['manifests'];
+};
+
 type Manifest = Map<string, Set<string>>;
 
 function hasManifestMembers(manifest: Manifest): boolean {
@@ -74,6 +84,7 @@ type Dependency = {
   fullName: string;
   managed: boolean;
   fieldNames: string[];
+  restore?: boolean;
 };
 
 type DependencyRow = {
@@ -132,6 +143,18 @@ export type GenerateSourceDeltaOptions = {
   verbose?: boolean;
   targetOrg?: string;
   connection?: Connection;
+};
+
+export type EditSourceReferencesOptions = {
+  root: string;
+  packageDirectories: PackageDirectory[];
+  from: string;
+  fields: string[];
+  paths: string[];
+  outputDirectory: string;
+  targetOrg?: string;
+  force?: boolean;
+  apiVersion?: string;
 };
 
 const parser = new XMLParser({
@@ -251,6 +274,16 @@ function addManifest(manifest: Manifest, type: string, fullName: string): void {
   manifest.set(type, members);
 }
 
+function removeManifest(
+  manifest: Manifest,
+  type: string,
+  fullName: string
+): void {
+  const members = manifest.get(type);
+  members?.delete(fullName);
+  if (members?.size === 0) manifest.delete(type);
+}
+
 function manifestXml(manifest: Manifest, version: string): string {
   const types = [...manifest]
     .filter(([, members]) => members.size)
@@ -288,6 +321,29 @@ async function sourceIndex(
     }
   }
   return index;
+}
+
+async function sourcePathsAtRevision(
+  root: string,
+  revision: string,
+  packageDirectories: PackageDirectory[],
+  forceIgnore: ForceIgnore
+): Promise<Map<string, string>> {
+  const paths = await git(root, [
+    'ls-tree',
+    '-r',
+    '--name-only',
+    revision,
+    '--',
+    ...packageDirectories.map((directory) => directory.path),
+  ]);
+  const result = new Map<string, string>();
+  for (const filepath of paths.split('\n').filter(Boolean)) {
+    if (forceIgnore.denies(path.join(root, filepath))) continue;
+    const info = metadataInfo(filepath);
+    if (info) result.set(`${info.type}#${info.fullName}`, filepath);
+  }
+  return result;
 }
 
 class DependencyResolver {
@@ -597,7 +653,6 @@ function metadataInfo(
     [/\.layout-meta\.xml$/, 'Layout'],
     [/\.permissionset-meta\.xml$/, 'PermissionSet'],
     [/\.profile-meta\.xml$/, 'Profile'],
-    [/\.validationRule-meta\.xml$/, 'ValidationRule'],
   ];
   for (const [suffix, type] of suffixes) {
     if (suffix.test(basename))
@@ -605,6 +660,14 @@ function metadataInfo(
   }
   const field = fieldFullName(normalized);
   if (field) return { type: 'CustomField', fullName: field };
+  const validationRule = normalized.match(
+    /\/objects\/([^/]+)\/validationRules\/([^/]+)\.validationRule-meta\.xml$/
+  );
+  if (validationRule)
+    return {
+      type: 'ValidationRule',
+      fullName: `${validationRule[1]}.${validationRule[2]}`,
+    };
   const listView = normalized.match(
     /\/objects\/([^/]+)\/listViews\/([^/]+)\.listView-meta\.xml$/
   );
@@ -629,6 +692,15 @@ function constantFormula(xml: string): string {
     default:
       return '0';
   }
+}
+
+function countRollupSummary(xml: string): string {
+  return xml
+    .replace(/^[ \t]*<summarizedField>[^<]*<\/summarizedField>\r?\n?/gm, '')
+    .replace(
+      /<summaryOperation>[^<]*<\/summaryOperation>/,
+      '<summaryOperation>count</summaryOperation>'
+    );
 }
 
 function transformReference(
@@ -746,6 +818,7 @@ async function writeEmptyFlowReference(
   }
 }
 
+// eslint-disable-next-line complexity
 async function editReferences(
   options: GenerateSourceDeltaOptions,
   dependencies: Dependency[],
@@ -753,21 +826,29 @@ async function editReferences(
   apiVersion: string,
   finalPackage: Manifest,
   prePackage: Manifest,
-  prePostDestructive: Manifest,
   flows: Set<string>,
   reviews: ManualReview[],
   warnings: string[],
-  hardBlockers: string[]
-): Promise<void> {
+  hardBlockers: string[],
+  settings: {
+    editAutoCleanup?: boolean;
+    copyUnchanged?: boolean;
+    filepaths?: Map<string, string>;
+  } = {}
+): Promise<Array<{ path: string; changed: boolean }>> {
   const preRoot = path.join(options.outputDirectory, 'preDeploy');
+  const results: Array<{ path: string; changed: boolean }> = [];
 
   for (const dependency of dependencies) {
     if (dependency.managed) continue;
-    addManifest(finalPackage, dependency.type, dependency.fullName);
-    if (autoCleanupTypes.has(dependency.type)) continue;
+    if (dependency.restore !== false)
+      addManifest(finalPackage, dependency.type, dependency.fullName);
+    if (autoCleanupTypes.has(dependency.type) && !settings.editAutoCleanup)
+      continue;
     const component = source.get(`${dependency.type}#${dependency.fullName}`);
-    if (!component) continue;
-    const filepath = componentFilepath(options.root, component);
+    const filepath =
+      settings.filepaths?.get(dependency.id) ??
+      (component ? componentFilepath(options.root, component) : undefined);
     if (!filepath) {
       reviews.push({
         path: `${dependency.type}:${dependency.fullName}`,
@@ -800,10 +881,15 @@ async function editReferences(
         warnings,
         hardBlockers
       );
+      results.push({ path: filepath, changed: true });
       continue;
     }
     if (info.type === 'ApexClass') {
       const result = stubApexMethods(content, dependency.fieldNames);
+      const tokens = dependency.fieldNames.flatMap((fieldName) => [
+        fieldName,
+        fieldName.split('.')[1],
+      ]);
       reviews.push(
         ...result.reviews.map((review) => ({
           path: filepath,
@@ -814,6 +900,24 @@ async function editReferences(
       addManifest(prePackage, info.type, info.fullName);
       // eslint-disable-next-line no-await-in-loop
       await writePreDeploySource(options, preRoot, filepath, result.content);
+      if (result.content === content && settings.copyUnchanged)
+        warnings.push(
+          `Reference could not be edited automatically: ${filepath}`
+        );
+      else if (tokens.some((token) => token && result.content.includes(token)))
+        warnings.push(
+          `Field reference remains after automatic editing: ${filepath}`
+        );
+      if (
+        settings.copyUnchanged &&
+        (result.content === content ||
+          tokens.some((token) => token && result.content.includes(token)))
+      )
+        reviews.push({
+          path: filepath,
+          reason: 'Field references must be edited manually',
+        });
+      results.push({ path: filepath, changed: result.content !== content });
       continue;
     }
     if (info.type === 'ApexTrigger') {
@@ -824,6 +928,7 @@ async function editReferences(
       addManifest(prePackage, info.type, info.fullName);
       // eslint-disable-next-line no-await-in-loop
       await writePreDeploySource(options, preRoot, filepath, content);
+      results.push({ path: filepath, changed: false });
       continue;
     }
     if (
@@ -831,7 +936,29 @@ async function editReferences(
       (content.includes('<summaryOperation>') ||
         content.includes('<type>Summary</type>'))
     ) {
-      addManifest(prePostDestructive, info.type, info.fullName);
+      const transformed = countRollupSummary(content);
+      const tokens = dependency.fieldNames.flatMap((fieldName) => [
+        fieldName,
+        fieldName.split('.')[1],
+      ]);
+      if (tokens.some((token) => token && transformed.includes(token))) {
+        warnings.push(
+          `Field reference remains after automatic editing: ${filepath}`
+        );
+        if (settings.copyUnchanged)
+          reviews.push({
+            path: filepath,
+            reason: 'Field references remain after automatic editing',
+          });
+      }
+      if (transformed === content)
+        warnings.push(
+          `Reference could not be edited automatically: ${filepath}`
+        );
+      addManifest(prePackage, info.type, info.fullName);
+      // eslint-disable-next-line no-await-in-loop
+      await writePreDeploySource(options, preRoot, filepath, transformed);
+      results.push({ path: filepath, changed: transformed !== content });
       continue;
     }
     const tokens = dependency.fieldNames.flatMap((fieldName) => [
@@ -841,12 +968,34 @@ async function editReferences(
     const transformed = transformReference(filepath, content, tokens, reviews);
     if (transformed === undefined || transformed === content) {
       warnings.push(`Reference could not be edited automatically: ${filepath}`);
+      if (settings.copyUnchanged && transformed !== undefined) {
+        reviews.push({
+          path: filepath,
+          reason: 'Field references must be edited manually',
+        });
+        addManifest(prePackage, info.type, info.fullName);
+        // eslint-disable-next-line no-await-in-loop
+        await writePreDeploySource(options, preRoot, filepath, transformed);
+        results.push({ path: filepath, changed: false });
+      }
       continue;
+    }
+    if (tokens.some((token) => token && transformed.includes(token))) {
+      warnings.push(
+        `Field reference remains after automatic editing: ${filepath}`
+      );
+      if (settings.copyUnchanged)
+        reviews.push({
+          path: filepath,
+          reason: 'Field references remain after automatic editing',
+        });
     }
     addManifest(prePackage, info.type, info.fullName);
     // eslint-disable-next-line no-await-in-loop
     await writePreDeploySource(options, preRoot, filepath, transformed);
+    results.push({ path: filepath, changed: true });
   }
+  return results;
 }
 
 function deploymentSteps(
@@ -1083,7 +1232,6 @@ export async function generateSourceDelta(
       '66.0';
     const preDestructive: Manifest = new Map();
     const prePackage: Manifest = new Map();
-    const prePostDestructive: Manifest = new Map();
     const warnings = job.warnings.map((warning) => warning.message);
     const hardBlockers: string[] = [];
     const manualReview: ManualReview[] = [];
@@ -1110,6 +1258,24 @@ export async function generateSourceDelta(
         );
         const resolved = await dependencyResolver.resolve(fields);
         hardBlockers.push(...resolved.unresolved);
+        const isScheduledForDeletion = (dependency: Dependency) =>
+          destructiveData.manifest
+            .get(dependency.type)
+            ?.has(dependency.fullName) ?? false;
+        const needsRevisionPaths = resolved.dependencies.some(
+          (dependency) =>
+            isScheduledForDeletion(dependency) &&
+            !source.has(`${dependency.type}#${dependency.fullName}`)
+        );
+        const revisionPaths = needsRevisionPaths
+          ? await sourcePathsAtRevision(
+              options.root,
+              options.from,
+              options.packageDirectories,
+              forceIgnore
+            )
+          : new Map<string, string>();
+        const dependencyFilepaths = new Map<string, string>();
         for (const dependency of resolved.dependencies) {
           if (dependency.managed) {
             hardBlockers.push(
@@ -1117,7 +1283,17 @@ export async function generateSourceDelta(
             );
             continue;
           }
-          if (!source.has(`${dependency.type}#${dependency.fullName}`)) {
+          const key = `${dependency.type}#${dependency.fullName}`;
+          const scheduledForDeletion = isScheduledForDeletion(dependency);
+          dependency.restore = !scheduledForDeletion;
+          if (!source.has(key) && scheduledForDeletion) {
+            const filepath = revisionPaths.get(key);
+            if (filepath) dependencyFilepaths.set(dependency.id, filepath);
+            else
+              hardBlockers.push(
+                `Dependency cannot be loaded from Git revision ${options.from}: ${dependency.type}:${dependency.fullName}`
+              );
+          } else if (!source.has(key)) {
             hardBlockers.push(
               `Dependency cannot be restored from Git: ${dependency.type}:${dependency.fullName}`
             );
@@ -1130,11 +1306,11 @@ export async function generateSourceDelta(
           version,
           packageData.manifest,
           prePackage,
-          prePostDestructive,
           flows,
           manualReview,
           warnings,
-          hardBlockers
+          hardBlockers,
+          { filepaths: dependencyFilepaths }
         );
       }
     }
@@ -1145,7 +1321,7 @@ export async function generateSourceDelta(
     );
     const hasPreDestructive = hasManifestMembers(preDestructive);
     const hasPostDestructive = hasManifestMembers(destructiveData.manifest);
-    const hasPrePostDestructive = hasManifestMembers(prePostDestructive);
+    const hasPrePostDestructive = false;
     if (hasPreDestructive)
       await fs.outputFile(
         path.join(deployRoot, 'destructiveChangesPre.xml'),
@@ -1169,11 +1345,6 @@ export async function generateSourceDelta(
         path.join(preRoot, 'package.xml'),
         manifestXml(prePackage, version)
       );
-      if (hasPrePostDestructive)
-        await fs.outputFile(
-          path.join(preRoot, 'destructiveChangesPost.xml'),
-          manifestXml(prePostDestructive, version)
-        );
       const projectConfig = {
         packageDirectories: options.packageDirectories,
         sourceApiVersion: version,
@@ -1242,4 +1413,308 @@ export async function generateSourceDelta(
   } finally {
     await fs.remove(temporary);
   }
+}
+
+function repositoryRelativePath(root: string, filepath: string): string {
+  if (path.isAbsolute(filepath))
+    throw new SfError(`Path must be relative to the project: ${filepath}`);
+  const absolute = path.resolve(root, filepath);
+  const relative = path.relative(root, absolute);
+  if (
+    !relative ||
+    relative === '..' ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    throw new SfError(`Path must remain inside the project: ${filepath}`);
+  return relative.replaceAll('\\', '/');
+}
+
+function isInPackageDirectory(
+  filepath: string,
+  packageDirectories: PackageDirectory[]
+): boolean {
+  return packageDirectories.some((directory) => {
+    const relative = path.posix.relative(
+      directory.path.replaceAll('\\', '/'),
+      filepath
+    );
+    return (
+      relative !== '..' &&
+      !relative.startsWith('../') &&
+      !path.posix.isAbsolute(relative)
+    );
+  });
+}
+
+async function readManifest(filepath: string): Promise<{
+  manifest: Manifest;
+  version?: string;
+}> {
+  return parseManifest(
+    (await fs.pathExists(filepath))
+      ? await fs.readFile(filepath, 'utf8')
+      : undefined
+  );
+}
+
+async function firstExistingPath(paths: string[]): Promise<string | undefined> {
+  const results = await Promise.all(
+    paths.map(async (filepath) => ({
+      filepath,
+      exists: await fs.pathExists(filepath),
+    }))
+  );
+  return results.find((item) => item.exists)?.filepath;
+}
+
+// eslint-disable-next-line complexity
+export async function editSourceReferences(
+  options: EditSourceReferencesOptions
+): Promise<SourceReferenceEditResult> {
+  const dirty = await git(options.root, [
+    'status',
+    '--porcelain',
+    '--untracked-files=no',
+  ]);
+  if (dirty) throw new SfError('Tracked files contain uncommitted changes');
+
+  const outputDirectory = path.resolve(options.root, options.outputDirectory);
+  const relativeOutput = path.relative(options.root, outputDirectory);
+  if (
+    !relativeOutput ||
+    relativeOutput === '..' ||
+    relativeOutput.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeOutput)
+  )
+    throw new SfError(
+      'The output directory must be a subdirectory of the Salesforce project'
+    );
+
+  const deployRoot = path.join(outputDirectory, 'deploy');
+  const preRoot = path.join(outputDirectory, 'preDeploy');
+  const packagePath = path.join(deployRoot, 'package.xml');
+  const preDestructivePath = path.join(deployRoot, 'destructiveChangesPre.xml');
+  if (!(await fs.pathExists(packagePath)))
+    throw new SfError(`A source delta package was not found: ${packagePath}`);
+  if (!(await fs.pathExists(preDestructivePath)))
+    throw new SfError(
+      `A source delta pre-destructive manifest was not found: ${preDestructivePath}`
+    );
+
+  for (const directory of options.packageDirectories)
+    preDeployPackageDirectory(preRoot, directory.path);
+
+  const forceIgnorePath = path.join(options.root, '.forceignore');
+  const forceIgnore = new ForceIgnore(
+    (await fs.pathExists(forceIgnorePath)) ? forceIgnorePath : undefined
+  );
+  const packageData = await readManifest(packagePath);
+  const preDestructiveData = await readManifest(preDestructivePath);
+  const prePackagePath = path.join(preRoot, 'package.xml');
+  const prePackageData = await readManifest(prePackagePath);
+  const prePostDestructivePath = path.join(
+    preRoot,
+    'destructiveChangesPost.xml'
+  );
+  const prePostDestructiveData = await readManifest(prePostDestructivePath);
+  const postDestructivePath = path.join(
+    deployRoot,
+    'destructiveChangesPost.xml'
+  );
+  const postDestructiveData = await readManifest(postDestructivePath);
+  const version =
+    packageData.version ??
+    preDestructiveData.version ??
+    options.apiVersion ??
+    '66.0';
+  const selectedFields = [...new Set(options.fields)];
+  const destructiveFields =
+    preDestructiveData.manifest.get('CustomField') ?? new Set<string>();
+  for (const field of selectedFields) {
+    if (!destructiveFields.has(field))
+      throw new SfError(
+        `CustomField is not in deploy/destructiveChangesPre.xml: ${field}`
+      );
+  }
+
+  const selectedPaths = [...new Set(options.paths)].map((filepath) =>
+    repositoryRelativePath(options.root, filepath)
+  );
+  const source = await sourceIndex(options.root, options.packageDirectories);
+  const dependencies: Dependency[] = [];
+  const dependencyFilepaths = new Map<string, string>();
+  const rollups: Array<{ type: string; fullName: string }> = [];
+  for (const filepath of selectedPaths) {
+    if (!isInPackageDirectory(filepath, options.packageDirectories))
+      throw new SfError(`Path is outside packageDirectories: ${filepath}`);
+    const absolute = path.join(options.root, filepath);
+    if (forceIgnore.denies(absolute))
+      throw new SfError(`Path is excluded by .forceignore: ${filepath}`);
+    const info = metadataInfo(filepath);
+    if (!info) throw new SfError(`Unsupported metadata path: ${filepath}`);
+    // eslint-disable-next-line no-await-in-loop
+    const content = await gitFile(options.root, options.from, filepath);
+    if (content === undefined)
+      throw new SfError(
+        `Path was not found at revision ${options.from}: ${filepath}`
+      );
+    const component = source.get(`${info.type}#${info.fullName}`);
+    const resolvedPath = component
+      ? componentFilepath(options.root, component)
+      : undefined;
+    // eslint-disable-next-line no-await-in-loop
+    const existsAtHead = await fs.pathExists(absolute);
+    if (existsAtHead && (!component || resolvedPath !== filepath))
+      throw new SfError(
+        `Metadata could not be resolved from path: ${filepath}`
+      );
+    const scheduledForDeletion =
+      postDestructiveData.manifest.get(info.type)?.has(info.fullName) ?? false;
+    if (!component && !scheduledForDeletion)
+      throw new SfError(
+        `Metadata was not found at HEAD and is not in deploy/destructiveChangesPost.xml: ${info.type}:${info.fullName}`
+      );
+    const destinations = [path.join(preRoot, filepath)];
+    if (filepath.endsWith('.cls') || filepath.endsWith('.trigger'))
+      destinations.push(path.join(preRoot, `${filepath}-meta.xml`));
+    if (!options.force) {
+      // eslint-disable-next-line no-await-in-loop
+      const existing = await firstExistingPath(destinations);
+      if (existing)
+        throw new SfError(
+          `Pre-deploy source already exists: ${existing}. Use --force to replace it.`
+        );
+    }
+    dependencies.push({
+      id: filepath,
+      type: info.type,
+      fullName: info.fullName,
+      managed: false,
+      fieldNames: selectedFields,
+      restore: !scheduledForDeletion,
+    });
+    dependencyFilepaths.set(filepath, filepath);
+    if (
+      info.type === 'CustomField' &&
+      (content.includes('<summaryOperation>') ||
+        content.includes('<type>Summary</type>'))
+    )
+      rollups.push(info);
+  }
+
+  for (const rollup of rollups)
+    removeManifest(
+      prePostDestructiveData.manifest,
+      rollup.type,
+      rollup.fullName
+    );
+
+  const warnings: string[] = [];
+  const manualReview: ManualReview[] = [];
+  const hardBlockers: string[] = [];
+  const flows = new Set<string>(prePackageData.manifest.get('Flow') ?? []);
+  const editOptions: GenerateSourceDeltaOptions = {
+    root: options.root,
+    packageDirectories: options.packageDirectories,
+    from: options.from,
+    outputDirectory,
+    apiVersion: version,
+  };
+  const paths = await editReferences(
+    editOptions,
+    dependencies,
+    source,
+    version,
+    packageData.manifest,
+    prePackageData.manifest,
+    flows,
+    manualReview,
+    warnings,
+    hardBlockers,
+    {
+      editAutoCleanup: true,
+      copyUnchanged: true,
+      filepaths: dependencyFilepaths,
+    }
+  );
+  if (hardBlockers.length) throw new SfError(hardBlockers.join('\n'));
+
+  await fs.ensureDir(preRoot);
+  await Promise.all(
+    options.packageDirectories.map((directory) =>
+      fs.ensureDir(preDeployPackageDirectory(preRoot, directory.path))
+    )
+  );
+  await fs.outputFile(packagePath, manifestXml(packageData.manifest, version));
+  await fs.outputFile(
+    prePackagePath,
+    manifestXml(prePackageData.manifest, version)
+  );
+  if (hasManifestMembers(prePostDestructiveData.manifest))
+    await fs.outputFile(
+      prePostDestructivePath,
+      manifestXml(prePostDestructiveData.manifest, version)
+    );
+  else if (await fs.pathExists(prePostDestructivePath))
+    await fs.remove(prePostDestructivePath);
+
+  await fs.outputJson(
+    path.join(preRoot, 'sfdx-project.json'),
+    {
+      packageDirectories: options.packageDirectories,
+      sourceApiVersion: version,
+    },
+    { spaces: 2 }
+  );
+  if (await fs.pathExists(forceIgnorePath))
+    await fs.copy(forceIgnorePath, path.join(preRoot, '.forceignore'));
+
+  const fields = await detectFieldTypeChanges(editOptions, forceIgnore);
+  const sortedFlows = [...flows].sort((a, b) => a.localeCompare(b));
+  const hasPrePostDestructive = hasManifestMembers(
+    prePostDestructiveData.manifest
+  );
+  const hasPostDestructive = hasManifestMembers(postDestructiveData.manifest);
+  const instructionSteps = deploymentSteps(
+    outputDirectory,
+    true,
+    hasPrePostDestructive,
+    hasManifestMembers(preDestructiveData.manifest),
+    hasPostDestructive,
+    sortedFlows,
+    options.targetOrg
+  );
+  const deploySteps = instructionSteps.map((step) => step.command);
+  const deploymentInstructions = path.join(
+    outputDirectory,
+    'deploymentInstructions.md'
+  );
+  await fs.outputFile(
+    deploymentInstructions,
+    deploymentInstructionsMarkdown(
+      instructionSteps,
+      fields,
+      outputDirectory,
+      options.targetOrg
+    )
+  );
+
+  return {
+    outputDirectory,
+    deploymentInstructions,
+    paths,
+    manualReview,
+    warnings: [...new Set(warnings)],
+    deploySteps,
+    manifests: {
+      package: packagePath,
+      preDestructive: preDestructivePath,
+      postDestructive: hasPostDestructive ? postDestructivePath : undefined,
+      preDeployPackage: prePackagePath,
+      preDeployPostDestructive: hasPrePostDestructive
+        ? prePostDestructivePath
+        : undefined,
+    },
+  };
 }
