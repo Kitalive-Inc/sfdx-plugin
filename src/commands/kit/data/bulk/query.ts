@@ -185,7 +185,7 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
     rows: JsforceRecord[],
     labels: Map<string, string>
   ): JsonMap[] {
-    if (!labels.size) return rows as JsonMap[];
+    if (!labels.size) return rows;
 
     return rows.map((row) =>
       Object.fromEntries(
@@ -194,7 +194,7 @@ export default class QueryCommand extends SfCommand<JsonMap[]> {
           value,
         ])
       )
-    ) as JsonMap[];
+    );
   }
 
   public validateFieldLabels(soql: string, labels: Map<string, string>) {

@@ -156,8 +156,7 @@ function setPicklistOptions(field: CustomField, existingField?: CustomField) {
       );
       const options = values.split(/;|[\r\n]+/).map((value) => {
         const [name, label] = value.split(/\s*:\s*/);
-        const option =
-          oldOptionMap.get(name) ?? ({ valueName: name } as CustomValue);
+        const option = oldOptionMap.get(name) ?? { valueName: name };
         option.label = label ?? name;
         oldOptionMap.delete(name);
         return option;

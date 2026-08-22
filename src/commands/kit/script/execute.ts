@@ -40,7 +40,7 @@ export default class ScriptExecute extends SfCommand<void> {
     const require = (name: string): unknown => {
       try {
         return createRequire(import.meta.resolve(name))(name);
-      } catch (e) {
+      } catch {
         return defaultRequire(name);
       }
     };

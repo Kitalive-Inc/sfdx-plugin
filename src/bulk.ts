@@ -159,7 +159,6 @@ export function bulkLoad(
       batch.execute(batchRows);
     });
 
-  // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     job.on('error', reject);
 

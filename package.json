@@ -7,11 +7,11 @@
   "dependencies": {
     "@apexdevtools/apex-parser": "^5.1.0",
     "@jetstreamapp/soql-parser-js": "^6.3.1",
-    "@oclif/core": "^4",
-    "@salesforce/core": "^8.24.0",
-    "@salesforce/kit": "^3",
-    "@salesforce/sf-plugins-core": "^12.2.28",
-    "@salesforce/source-deploy-retrieve": "12.36.7",
+    "@oclif/core": "^4.14.0",
+    "@salesforce/core": "^9.1.5",
+    "@salesforce/kit": "^4",
+    "@salesforce/sf-plugins-core": "^13.0.3",
+    "@salesforce/source-deploy-retrieve": "13.2.0",
     "dayjs": "^1.11.19",
     "express": "^5.2.1",
     "fast-csv": "^5.0.5",
@@ -24,21 +24,25 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "@oclif/plugin-command-snapshot": "^5.3.8",
+    "@oclif/plugin-command-snapshot": "^5.3.35",
     "@salesforce/cli-plugins-testkit": "^5.3.41",
-    "@salesforce/dev-scripts": "^11",
+    "@salesforce/dev-scripts": "^13.0.2",
     "@types/express": "^5.0.6",
     "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22",
     "@types/yargs": "^17.0.35",
-    "eslint-plugin-sf-plugin": "^1.20.33",
+    "eslint": "^10.9.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-config-salesforce-typescript": "^6.0.0",
+    "eslint-plugin-sf-plugin": "^3.0.0",
     "esmock": "^2.7.3",
     "mocha": "^11.7.5",
     "oclif": "^4.22.59",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "5.6.3"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.13.0"
   },
   "files": [
     "/lib",
@@ -71,8 +75,12 @@
   },
   "repository": "Kitalive-Inc/sfdx-plugin",
   "resolutions": {
-    "@oclif/core": "4.13.2",
-    "@salesforce/core": "8.32.6"
+    "@oclif/core": "4.14.0",
+    "@salesforce/dev-scripts/linkinator": "8.0.4",
+    "@salesforce/dev-scripts/nyc": "18.0.0",
+    "mocha/diff": "8.0.3",
+    "lodash-es": "4.18.1",
+    "serialize-javascript": "7.0.5"
   },
   "scripts": {
     "build": "wireit",

@@ -164,6 +164,7 @@ export default class CsvConvert extends CsvCommand<JsonMap[]> {
   public static readonly examples = messages.getMessages('examples');
 
   public static readonly flags = {
+    ...CsvCommand.flags,
     input: Flags.string({
       char: 'i',
       summary: messages.getMessage('flags.input.summary'),
@@ -210,7 +211,7 @@ export default class CsvConvert extends CsvCommand<JsonMap[]> {
     const { flags } = await this.parse(CsvConvert);
 
     this.org = flags['target-org'];
-    this.conn = this.org?.getConnection(flags['api-version'] as string);
+    this.conn = this.org?.getConnection(flags['api-version']);
     this.options = {
       input: flags.input,
       encoding: flags.encoding,

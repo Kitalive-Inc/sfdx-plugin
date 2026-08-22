@@ -397,7 +397,6 @@ class DependencyResolver {
       rowsByType.set(row.MetadataComponentType, items);
     }
     for (const [type, typeRows] of rowsByType) {
-      // eslint-disable-next-line no-await-in-loop
       const metadata =
         type === 'CustomField'
           ? // eslint-disable-next-line no-await-in-loop

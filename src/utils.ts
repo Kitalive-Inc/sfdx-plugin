@@ -111,7 +111,6 @@ export function columnMapper(mapping: JsonMap): (row: JsonMap) => JsonMap {
     for (const to of keys) {
       const from = mapping[to] as string;
       if (!(from in row)) throw new Error(`The column '${from}' is not found`);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[to] = row[from];
     }
     return result;
