@@ -47,6 +47,7 @@ USAGE
 * [`sf kit script`](#sf-kit-script)
 * [`sf kit script execute`](#sf-kit-script-execute)
 * [`sf kit source delta`](#sf-kit-source-delta)
+* [`sf kit source diff`](#sf-kit-source-diff)
 * [`sf kit source edit-references`](#sf-kit-source-edit-references)
 
 ## `sf kit cmdt generate records`
@@ -765,6 +766,40 @@ EXAMPLES
 ```
 
 _See code: [src/commands/kit/source/delta.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.2.0-rc.1/src/commands/kit/source/delta.ts)_
+
+## `sf kit source diff`
+
+Compare metadata at a Git revision with metadata retrieved from an org
+
+```
+USAGE
+  $ sf kit source diff -o <value> [--json] [--flags-dir <value>] [-b <value>]
+    [-x <value>] [-d <value>...] [--ignore-element <value>...] [--worktree-dir
+    <value>] [--api-version <value>]
+
+FLAGS
+  -b, --base=<value>               [default: HEAD] Git revision used as the comparison base.
+  -d, --source-dir=<value>...      Source directory at the base revision to retrieve and compare. May be specified
+                                   multiple times.
+  -o, --target-org=<value>         (required) Username or alias of the target org. Not required if the `target-org`
+                                   configuration variable is already set.
+  -x, --manifest=<value>           Manifest that specifies metadata to retrieve and compare.
+      --api-version=<value>        Override the api version used for api requests made by this command
+      --ignore-element=<value>...  Metadata type and XML element to ignore during comparison, in MetadataType:element
+                                   format. May be specified multiple times.
+      --worktree-dir=<value>       Directory for the detached Git worktree. A temporary directory is used when omitted.
+
+GLOBAL FLAGS
+  --flags-dir=<value>  Import flag values from a directory.
+  --json               Format output as json.
+
+EXAMPLES
+  $ sf kit source diff --target-org my-org --manifest output/deploy/package.xml
+
+  $ sf kit source diff --base origin/main --target-org my-org --source-dir force-app/main/default/objects/Account --ignore-element CustomObject:enableFeeds
+```
+
+_See code: [src/commands/kit/source/diff.ts](https://github.com/Kitalive-Inc/sfdx-plugin/blob/v1.2.0-rc.1/src/commands/kit/source/diff.ts)_
 
 ## `sf kit source edit-references`
 
