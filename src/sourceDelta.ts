@@ -756,13 +756,16 @@ async function writePreDeploySource(
   options: GenerateSourceDeltaOptions,
   preRoot: string,
   filepath: string,
-  content: string
+  content: string,
+  companionOverride?: string
 ): Promise<void> {
   await fs.outputFile(path.join(preRoot, filepath), content);
   if (filepath.endsWith('.cls') || filepath.endsWith('.trigger')) {
     const companionPath = `${filepath}-meta.xml`;
-    const companion = await gitFile(options.root, options.from, companionPath);
-    if (companion)
+    const companion =
+      companionOverride ??
+      (await gitFile(options.root, options.from, companionPath));
+    if (companion !== undefined)
       await fs.outputFile(path.join(preRoot, companionPath), companion);
   }
 }
@@ -833,6 +836,8 @@ async function editReferences(
     editAutoCleanup?: boolean;
     copyUnchanged?: boolean;
     filepaths?: Map<string, string>;
+    contents?: Map<string, string>;
+    companionContents?: Map<string, string>;
   } = {}
 ): Promise<Array<{ path: string; changed: boolean }>> {
   const preRoot = path.join(options.outputDirectory, 'preDeploy');
@@ -855,9 +860,11 @@ async function editReferences(
       });
       continue;
     }
-    // eslint-disable-next-line no-await-in-loop
-    const content = await gitFile(options.root, options.from, filepath);
-    if (!content) continue;
+    let content = settings.contents?.get(dependency.id);
+    if (content === undefined)
+      // eslint-disable-next-line no-await-in-loop
+      content = await gitFile(options.root, options.from, filepath);
+    if (content === undefined) continue;
     const info = metadataInfo(filepath);
     if (!info) {
       reviews.push({
@@ -898,7 +905,13 @@ async function editReferences(
       );
       addManifest(prePackage, info.type, info.fullName);
       // eslint-disable-next-line no-await-in-loop
-      await writePreDeploySource(options, preRoot, filepath, result.content);
+      await writePreDeploySource(
+        options,
+        preRoot,
+        filepath,
+        result.content,
+        settings.companionContents?.get(dependency.id)
+      );
       if (result.content === content && settings.copyUnchanged)
         warnings.push(
           `Reference could not be edited automatically: ${filepath}`
@@ -926,7 +939,13 @@ async function editReferences(
       });
       addManifest(prePackage, info.type, info.fullName);
       // eslint-disable-next-line no-await-in-loop
-      await writePreDeploySource(options, preRoot, filepath, content);
+      await writePreDeploySource(
+        options,
+        preRoot,
+        filepath,
+        content,
+        settings.companionContents?.get(dependency.id)
+      );
       results.push({ path: filepath, changed: false });
       continue;
     }
@@ -956,7 +975,13 @@ async function editReferences(
         );
       addManifest(prePackage, info.type, info.fullName);
       // eslint-disable-next-line no-await-in-loop
-      await writePreDeploySource(options, preRoot, filepath, transformed);
+      await writePreDeploySource(
+        options,
+        preRoot,
+        filepath,
+        transformed,
+        settings.companionContents?.get(dependency.id)
+      );
       results.push({ path: filepath, changed: transformed !== content });
       continue;
     }
@@ -974,7 +999,13 @@ async function editReferences(
         });
         addManifest(prePackage, info.type, info.fullName);
         // eslint-disable-next-line no-await-in-loop
-        await writePreDeploySource(options, preRoot, filepath, transformed);
+        await writePreDeploySource(
+          options,
+          preRoot,
+          filepath,
+          transformed,
+          settings.companionContents?.get(dependency.id)
+        );
         results.push({ path: filepath, changed: false });
       }
       continue;
@@ -991,7 +1022,13 @@ async function editReferences(
     }
     addManifest(prePackage, info.type, info.fullName);
     // eslint-disable-next-line no-await-in-loop
-    await writePreDeploySource(options, preRoot, filepath, transformed);
+    await writePreDeploySource(
+      options,
+      preRoot,
+      filepath,
+      transformed,
+      settings.companionContents?.get(dependency.id)
+    );
     results.push({ path: filepath, changed: true });
   }
   return results;
@@ -1457,14 +1494,71 @@ async function readManifest(filepath: string): Promise<{
   );
 }
 
-async function firstExistingPath(paths: string[]): Promise<string | undefined> {
-  const results = await Promise.all(
-    paths.map(async (filepath) => ({
+type EditInputSource = 'preDeploy' | 'revision' | 'workingTree';
+
+async function readEditInput(
+  root: string,
+  preRoot: string,
+  revision: string,
+  filepath: string,
+  source: EditInputSource
+): Promise<string | undefined> {
+  if (source === 'revision') return gitFile(root, revision, filepath);
+  const absolute = path.join(source === 'preDeploy' ? preRoot : root, filepath);
+  return (await fs.pathExists(absolute))
+    ? fs.readFile(absolute, 'utf8')
+    : undefined;
+}
+
+async function resolveEditInput(
+  root: string,
+  preRoot: string,
+  revision: string,
+  filepath: string,
+  force: boolean
+): Promise<{ content: string; source: EditInputSource } | undefined> {
+  const sources: EditInputSource[] = force
+    ? ['revision', 'workingTree']
+    : ['preDeploy', 'revision', 'workingTree'];
+  for (const source of sources) {
+    // eslint-disable-next-line no-await-in-loop
+    const content = await readEditInput(
+      root,
+      preRoot,
+      revision,
       filepath,
-      exists: await fs.pathExists(filepath),
-    }))
-  );
-  return results.find((item) => item.exists)?.filepath;
+      source
+    );
+    if (content !== undefined) return { content, source };
+  }
+  return undefined;
+}
+
+async function resolveCompanionInput(
+  root: string,
+  preRoot: string,
+  revision: string,
+  filepath: string,
+  primarySource: EditInputSource
+): Promise<string | undefined> {
+  const sources: EditInputSource[] =
+    primarySource === 'preDeploy'
+      ? ['preDeploy', 'revision', 'workingTree']
+      : primarySource === 'revision'
+      ? ['revision', 'workingTree']
+      : ['workingTree'];
+  for (const source of sources) {
+    // eslint-disable-next-line no-await-in-loop
+    const content = await readEditInput(
+      root,
+      preRoot,
+      revision,
+      filepath,
+      source
+    );
+    if (content !== undefined) return content;
+  }
+  return undefined;
 }
 
 // eslint-disable-next-line complexity
@@ -1496,10 +1590,6 @@ export async function editSourceReferences(
   const preDestructivePath = path.join(deployRoot, 'destructiveChangesPre.xml');
   if (!(await fs.pathExists(packagePath)))
     throw new SfError(`A source delta package was not found: ${packagePath}`);
-  if (!(await fs.pathExists(preDestructivePath)))
-    throw new SfError(
-      `A source delta pre-destructive manifest was not found: ${preDestructivePath}`
-    );
 
   for (const directory of options.packageDirectories)
     preDeployPackageDirectory(preRoot, directory.path);
@@ -1528,14 +1618,6 @@ export async function editSourceReferences(
     options.apiVersion ??
     '66.0';
   const selectedFields = [...new Set(options.fields)];
-  const destructiveFields =
-    preDestructiveData.manifest.get('CustomField') ?? new Set<string>();
-  for (const field of selectedFields) {
-    if (!destructiveFields.has(field))
-      throw new SfError(
-        `CustomField is not in deploy/destructiveChangesPre.xml: ${field}`
-      );
-  }
 
   const selectedPaths = [...new Set(options.paths)].map((filepath) =>
     repositoryRelativePath(options.root, filepath)
@@ -1543,6 +1625,9 @@ export async function editSourceReferences(
   const source = await sourceIndex(options.root, options.packageDirectories);
   const dependencies: Dependency[] = [];
   const dependencyFilepaths = new Map<string, string>();
+  const dependencyContents = new Map<string, string>();
+  const companionContents = new Map<string, string>();
+  const workingTreeFallbacks: string[] = [];
   const rollups: Array<{ type: string; fullName: string }> = [];
   for (const filepath of selectedPaths) {
     if (!isInPackageDirectory(filepath, options.packageDirectories))
@@ -1553,10 +1638,16 @@ export async function editSourceReferences(
     const info = metadataInfo(filepath);
     if (!info) throw new SfError(`Unsupported metadata path: ${filepath}`);
     // eslint-disable-next-line no-await-in-loop
-    const content = await gitFile(options.root, options.from, filepath);
-    if (content === undefined)
+    const input = await resolveEditInput(
+      options.root,
+      preRoot,
+      options.from,
+      filepath,
+      Boolean(options.force)
+    );
+    if (!input)
       throw new SfError(
-        `Path was not found at revision ${options.from}: ${filepath}`
+        `Path was not found in preDeploy, revision ${options.from}, or the working tree: ${filepath}`
       );
     const component = source.get(`${info.type}#${info.fullName}`);
     const resolvedPath = component
@@ -1570,21 +1661,29 @@ export async function editSourceReferences(
       );
     const scheduledForDeletion =
       postDestructiveData.manifest.get(info.type)?.has(info.fullName) ?? false;
-    if (!component && !scheduledForDeletion)
+    if (!component && !scheduledForDeletion && input.source !== 'preDeploy')
       throw new SfError(
         `Metadata was not found at HEAD and is not in deploy/destructiveChangesPost.xml: ${info.type}:${info.fullName}`
       );
-    const destinations = [path.join(preRoot, filepath)];
-    if (filepath.endsWith('.cls') || filepath.endsWith('.trigger'))
-      destinations.push(path.join(preRoot, `${filepath}-meta.xml`));
-    if (!options.force) {
+    dependencyContents.set(filepath, input.content);
+    if (input.source === 'workingTree') workingTreeFallbacks.push(filepath);
+    if (filepath.endsWith('.cls') || filepath.endsWith('.trigger')) {
       // eslint-disable-next-line no-await-in-loop
-      const existing = await firstExistingPath(destinations);
-      if (existing)
-        throw new SfError(
-          `Pre-deploy source already exists: ${existing}. Use --force to replace it.`
-        );
+      const companion = await resolveCompanionInput(
+        options.root,
+        preRoot,
+        options.from,
+        `${filepath}-meta.xml`,
+        input.source
+      );
+      if (companion !== undefined) companionContents.set(filepath, companion);
     }
+    if (
+      info.type === 'CustomField' &&
+      (input.content.includes('<summaryOperation>') ||
+        input.content.includes('<type>Summary</type>'))
+    )
+      rollups.push(info);
     dependencies.push({
       id: filepath,
       type: info.type,
@@ -1594,12 +1693,6 @@ export async function editSourceReferences(
       restore: !scheduledForDeletion,
     });
     dependencyFilepaths.set(filepath, filepath);
-    if (
-      info.type === 'CustomField' &&
-      (content.includes('<summaryOperation>') ||
-        content.includes('<type>Summary</type>'))
-    )
-      rollups.push(info);
   }
 
   for (const rollup of rollups)
@@ -1609,7 +1702,10 @@ export async function editSourceReferences(
       rollup.fullName
     );
 
-  const warnings: string[] = [];
+  const warnings: string[] = workingTreeFallbacks.map(
+    (filepath) =>
+      `Path was not found at revision ${options.from}; using working tree: ${filepath}`
+  );
   const manualReview: ManualReview[] = [];
   const hardBlockers: string[] = [];
   const flows = new Set<string>(prePackageData.manifest.get('Flow') ?? []);
@@ -1635,6 +1731,8 @@ export async function editSourceReferences(
       editAutoCleanup: true,
       copyUnchanged: true,
       filepaths: dependencyFilepaths,
+      contents: dependencyContents,
+      companionContents,
     }
   );
   if (hardBlockers.length) throw new SfError(hardBlockers.join('\n'));
@@ -1674,12 +1772,13 @@ export async function editSourceReferences(
   const hasPrePostDestructive = hasManifestMembers(
     prePostDestructiveData.manifest
   );
+  const hasPreDestructive = hasManifestMembers(preDestructiveData.manifest);
   const hasPostDestructive = hasManifestMembers(postDestructiveData.manifest);
   const instructionSteps = deploymentSteps(
     outputDirectory,
     true,
     hasPrePostDestructive,
-    hasManifestMembers(preDestructiveData.manifest),
+    hasPreDestructive,
     hasPostDestructive,
     sortedFlows,
     options.targetOrg
@@ -1708,7 +1807,7 @@ export async function editSourceReferences(
     deploySteps,
     manifests: {
       package: packagePath,
-      preDestructive: preDestructivePath,
+      preDestructive: hasPreDestructive ? preDestructivePath : undefined,
       postDestructive: hasPostDestructive ? postDestructivePath : undefined,
       preDeployPackage: prePackagePath,
       preDeployPostDestructive: hasPrePostDestructive

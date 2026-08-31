@@ -4,7 +4,7 @@ Add explicitly selected field-reference edits to an existing source delta
 
 # flags.from.summary
 
-Git revision from which the pre-deploy source is read.
+Git revision used when the selected source does not already exist in preDeploy.
 
 # flags.field.summary
 
@@ -12,7 +12,7 @@ CustomField API name whose references are removed. May be specified multiple tim
 
 # flags.path.summary
 
-Repository-relative metadata path to edit. May be specified multiple times.
+Repository-relative metadata path to edit. Existing preDeploy content is edited cumulatively. May be specified multiple times.
 
 # flags.output-dir.summary
 
@@ -24,7 +24,7 @@ Org alias or username written to the regenerated deployment instructions. No org
 
 # flags.force.summary
 
-Overwrite explicitly selected source files already present in preDeploy.
+Ignore existing preDeploy source and regenerate selected files from the Git revision or working tree.
 
 # examples
 

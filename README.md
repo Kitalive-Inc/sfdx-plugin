@@ -812,13 +812,15 @@ USAGE
 
 FLAGS
   -d, --output-dir=<value>  [default: output] Existing source delta output directory to update.
-  -f, --from=<value>        (required) Git revision from which the pre-deploy source is read.
+  -f, --from=<value>        (required) Git revision used when the selected source does not already exist in preDeploy.
   -o, --target-org=<value>  Org alias or username written to the regenerated deployment instructions. No org connection
                             is made.
-  -p, --path=<value>...     (required) Repository-relative metadata path to edit. May be specified multiple times.
+  -p, --path=<value>...     (required) Repository-relative metadata path to edit. Existing preDeploy content is edited
+                            cumulatively. May be specified multiple times.
       --field=<value>...    (required) CustomField API name whose references are removed. May be specified multiple
                             times.
-      --force               Overwrite explicitly selected source files already present in preDeploy.
+      --force               Ignore existing preDeploy source and regenerate selected files from the Git revision or
+                            working tree.
 
 GLOBAL FLAGS
   --flags-dir=<value>  Import flag values from a directory.

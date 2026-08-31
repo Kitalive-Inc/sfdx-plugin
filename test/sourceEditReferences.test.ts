@@ -153,33 +153,36 @@ describe('source edit references', () => {
     expect(instructions).to.include('Remove field references');
   });
 
-  it('does not overwrite an existing pre-deploy file without force', async () => {
+  it('continues editing an existing pre-deploy file without force', async () => {
     await fs.outputFile(
       path.join(root, 'output/preDeploy', flexiPath),
-      'manual'
+      `<?xml version="1.0"?><FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+  <description>previous edit</description>
+  <itemInstances><fieldInstance><fieldItem>Record.Other__c</fieldItem></fieldInstance></itemInstances>
+  <masterLabel>Account</masterLabel>
+</FlexiPage>
+`
     );
 
-    let error: unknown;
-    try {
-      await editSourceReferences({
-        root,
-        packageDirectories: [{ path: 'force-app' }],
-        from: 'HEAD~1',
-        fields: ['Line__c.Value__c'],
-        paths: [flexiPath],
-        outputDirectory: path.join(root, 'output'),
-      });
-    } catch (caught) {
-      error = caught;
-    }
+    const result = await editSourceReferences({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD~1',
+      fields: ['Line__c.Other__c'],
+      paths: [flexiPath],
+      outputDirectory: path.join(root, 'output'),
+    });
 
-    expect((error as Error).message).to.include('Use --force to replace it');
-    expect(
-      await fs.readFile(path.join(root, 'output/preDeploy', flexiPath), 'utf8')
-    ).to.equal('manual');
+    expect(result.paths).to.deep.equal([{ path: flexiPath, changed: true }]);
+    const edited = await fs.readFile(
+      path.join(root, 'output/preDeploy', flexiPath),
+      'utf8'
+    );
+    expect(edited).to.include('<description>previous edit</description>');
+    expect(edited).not.to.include('Record.Other__c');
   });
 
-  it('replaces an explicitly selected pre-deploy file with force', async () => {
+  it('resets an existing pre-deploy file from the revision with force', async () => {
     await fs.outputFile(
       path.join(root, 'output/preDeploy', flexiPath),
       'manual'
@@ -196,9 +199,12 @@ describe('source edit references', () => {
     });
 
     expect(result.paths).to.deep.equal([{ path: flexiPath, changed: true }]);
-    expect(
-      await fs.readFile(path.join(root, 'output/preDeploy', flexiPath), 'utf8')
-    ).not.to.include('<itemInstances>');
+    const edited = await fs.readFile(
+      path.join(root, 'output/preDeploy', flexiPath),
+      'utf8'
+    );
+    expect(edited).not.to.include('<itemInstances>');
+    expect(edited).not.to.equal('manual');
   });
 
   it('edits source from the revision when the metadata is deleted at HEAD', async () => {
@@ -255,23 +261,108 @@ describe('source edit references', () => {
     );
   });
 
-  it('rejects fields outside the generated pre-destructive manifest', async () => {
-    let error: unknown;
-    try {
-      await editSourceReferences({
-        root,
-        packageDirectories: [{ path: 'force-app' }],
-        from: 'HEAD~1',
-        fields: ['Line__c.Other__c'],
-        paths: [flexiPath],
-        outputDirectory: path.join(root, 'output'),
-      });
-    } catch (caught) {
-      error = caught;
-    }
+  it('allows fields outside the generated pre-destructive manifest', async () => {
+    const result = await editSourceReferences({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD~1',
+      fields: ['Line__c.Other__c'],
+      paths: [flexiPath],
+      outputDirectory: path.join(root, 'output'),
+    });
 
-    expect((error as Error).message).to.include(
-      'CustomField is not in deploy/destructiveChangesPre.xml'
+    expect(result.paths).to.deep.equal([{ path: flexiPath, changed: false }]);
+  });
+
+  it('supports a source delta without a pre-destructive manifest', async () => {
+    await fs.remove(path.join(root, 'output/deploy/destructiveChangesPre.xml'));
+
+    const result = await editSourceReferences({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD~1',
+      fields: ['Line__c.Value__c'],
+      paths: [flexiPath],
+      outputDirectory: path.join(root, 'output'),
+    });
+
+    expect(result.manifests.preDestructive).to.equal(undefined);
+    expect(result.deploySteps.join('\n')).not.to.include(
+      '--pre-destructive-changes'
     );
+  });
+
+  it('uses an untracked working-tree file when it is absent from the revision', async () => {
+    const workingPath =
+      'force-app/main/default/flexipages/Working.flexipage-meta.xml';
+    await fs.outputFile(
+      path.join(root, workingPath),
+      `<?xml version="1.0"?><FlexiPage xmlns="http://soap.sforce.com/2006/04/metadata">
+  <itemInstances><fieldInstance><fieldItem>Record.Value__c</fieldItem></fieldInstance></itemInstances>
+  <masterLabel>Working</masterLabel>
+</FlexiPage>
+`
+    );
+
+    const result = await editSourceReferences({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD~1',
+      fields: ['Line__c.Value__c'],
+      paths: [workingPath],
+      outputDirectory: path.join(root, 'output'),
+    });
+
+    expect(
+      await fs.readFile(
+        path.join(root, 'output/preDeploy', workingPath),
+        'utf8'
+      )
+    ).not.to.include('<itemInstances>');
+    expect(result.warnings).to.include(
+      `Path was not found at revision HEAD~1; using working tree: ${workingPath}`
+    );
+  });
+
+  it('preserves an existing pre-deploy companion file during cumulative editing', async () => {
+    const triggerPath =
+      'force-app/main/default/triggers/AccountTrigger.trigger';
+    const companionPath = `${triggerPath}-meta.xml`;
+    await fs.outputFile(
+      path.join(root, triggerPath),
+      'trigger AccountTrigger on Account (before insert) {}\n'
+    );
+    await fs.outputFile(
+      path.join(root, companionPath),
+      '<?xml version="1.0"?><ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata"><apiVersion>66.0</apiVersion><status>Active</status></ApexTrigger>\n'
+    );
+    execFileSync('git', ['add', triggerPath, companionPath], { cwd: root });
+    execFileSync('git', ['commit', '-qm', 'add trigger'], { cwd: root });
+    const existingCompanion =
+      '<?xml version="1.0"?><ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata"><apiVersion>65.0</apiVersion><status>Inactive</status></ApexTrigger>\n';
+    await fs.outputFile(
+      path.join(root, 'output/preDeploy', triggerPath),
+      'trigger AccountTrigger on Account (before insert) { // previous edit\n}\n'
+    );
+    await fs.outputFile(
+      path.join(root, 'output/preDeploy', companionPath),
+      existingCompanion
+    );
+
+    await editSourceReferences({
+      root,
+      packageDirectories: [{ path: 'force-app' }],
+      from: 'HEAD',
+      fields: ['Line__c.Other__c'],
+      paths: [triggerPath],
+      outputDirectory: path.join(root, 'output'),
+    });
+
+    expect(
+      await fs.readFile(
+        path.join(root, 'output/preDeploy', companionPath),
+        'utf8'
+      )
+    ).to.equal(existingCompanion);
   });
 });
