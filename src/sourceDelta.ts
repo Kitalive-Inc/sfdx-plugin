@@ -21,6 +21,7 @@ const forcedRecreateTypes = new Set([
   'Lookup',
   'EncryptedText',
 ]);
+const relationshipTypes = new Set(['MasterDetail', 'Lookup']);
 const autoCleanupTypes = new Set([
   'Layout',
   'Report',
@@ -237,6 +238,8 @@ async function detectFieldTypeChanges(
     const fromType = effectiveFieldType(fromXml);
     const toType = effectiveFieldType(toXml);
     if (fromType === toType) continue;
+    if (relationshipTypes.has(fromType) && relationshipTypes.has(toType))
+      continue;
     if (!forcedRecreateTypes.has(fromType) && !forcedRecreateTypes.has(toType))
       continue;
     results.push({

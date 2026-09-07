@@ -23,6 +23,18 @@ const fieldAfter = `<?xml version="1.0" encoding="UTF-8"?>
 </CustomField>
 `;
 
+const relationshipField = (
+  type: 'Lookup' | 'MasterDetail'
+) => `<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Value__c</fullName>
+    <label>Value</label>
+    <referenceTo>Contact</referenceTo>
+    <relationshipName>ValueContacts</relationshipName>
+    <type>${type}</type>
+</CustomField>
+`;
+
 type DependencyRow = {
   MetadataComponentId: string;
   MetadataComponentType: string;
@@ -297,6 +309,40 @@ describe('source delta', () => {
       'add `--test-level RunRelevantTests` to the deployment command'
     );
   });
+
+  for (const [fromType, toType] of [
+    ['Lookup', 'MasterDetail'],
+    ['MasterDetail', 'Lookup'],
+  ] as const) {
+    it(`does not recreate a field for ${fromType} to ${toType}`, async () => {
+      const fieldPath = path.join(
+        root,
+        'force-app/main/default/objects/Account/fields/Value__c.field-meta.xml'
+      );
+      await fs.outputFile(fieldPath, relationshipField(fromType));
+      execFileSync('git', ['add', '.'], { cwd: root });
+      execFileSync('git', ['commit', '-qm', `change field to ${fromType}`], {
+        cwd: root,
+      });
+      await fs.outputFile(fieldPath, relationshipField(toType));
+      execFileSync('git', ['add', '.'], { cwd: root });
+      execFileSync('git', ['commit', '-qm', `change field to ${toType}`], {
+        cwd: root,
+      });
+
+      const result = await generateSourceDelta({
+        root,
+        packageDirectories: [{ path: 'force-app' }],
+        from: 'HEAD~1',
+        outputDirectory: path.join(root, 'output'),
+        apiVersion: '66.0',
+      });
+
+      expect(result.fieldTypeChanges).to.deep.equal([]);
+      expect(result.manifests.preDestructive).to.equal(undefined);
+      expect(result.deploySteps).to.have.length(1);
+    });
+  }
 
   it('generates only the post destructive manifest for Git deletions', async () => {
     await fs.remove(
