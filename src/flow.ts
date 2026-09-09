@@ -5,6 +5,7 @@ import fs from 'fs-extra';
 export type FlowOperationResult = {
   name: string;
   versionNumber?: number;
+  interviewId?: string;
   status?: string;
   success: boolean;
   error?: string;
@@ -35,6 +36,16 @@ type FlowRecord = {
   Status: string;
 };
 
+type FlowInterviewRecord = {
+  Id: string;
+  FlowVersionViewId: string;
+};
+
+type FlowInterviewDeletionResult = {
+  versionId: string;
+  result: FlowOperationResult;
+};
+
 async function getDefinitions(
   conn: Connection,
   names: string[]
@@ -47,6 +58,142 @@ async function getDefinitions(
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+async function deleteFlowInterviews(
+  conn: Connection,
+  versions: FlowRecord[],
+  nameByDefinitionId: Map<string, string>
+): Promise<FlowInterviewDeletionResult[]> {
+  if (!versions.length) return [];
+  const versionById = new Map(versions.map((version) => [version.Id, version]));
+  const interviewQuery = conn
+    .sobject('FlowInterview')
+    .select('Id, FlowVersionViewId')
+    .where({ FlowVersionViewId: versions.map((version) => version.Id) })
+    .autoFetch(true)
+    .maxFetch(1_000_000);
+  const interviews = (await interviewQuery) as unknown as FlowInterviewRecord[];
+  if (!interviews.length) return [];
+
+  try {
+    const deletionResults = await conn.sobject('FlowInterview').destroy(
+      interviews.map((interview) => interview.Id),
+      { allowRecursive: true }
+    );
+    return deletionResults.map((deletionResult, index) => {
+      const interview = interviews[index];
+      const version = versionById.get(interview.FlowVersionViewId)!;
+      return {
+        versionId: version.Id,
+        result: {
+          name: nameByDefinitionId.get(version.DefinitionId)!,
+          versionNumber: version.VersionNumber,
+          interviewId: interview.Id,
+          status: version.Status,
+          success: deletionResult.success,
+          error: deletionResult.success
+            ? undefined
+            : deletionResult.errors.map((error) => error.message).join('; '),
+        },
+      };
+    });
+  } catch (error) {
+    return interviews.map((interview) => {
+      const version = versionById.get(interview.FlowVersionViewId)!;
+      return {
+        versionId: version.Id,
+        result: {
+          name: nameByDefinitionId.get(version.DefinitionId)!,
+          versionNumber: version.VersionNumber,
+          interviewId: interview.Id,
+          status: version.Status,
+          success: false,
+          error: errorMessage(error),
+        },
+      };
+    });
+  }
+}
+
+function flowInterviewIdsFromError(message: string): string[] {
+  return [
+    ...new Set(
+      message.match(/\b0Fo[A-Za-z0-9]{12}(?:[A-Za-z0-9]{3})?\b/g) ?? []
+    ),
+  ];
+}
+
+async function deleteFlowVersion(
+  conn: Connection,
+  version: FlowRecord,
+  name: string,
+  attemptedInterviewIds = new Set<string>()
+): Promise<FlowOperationResult[]> {
+  try {
+    const result = await conn.tooling.sobject('Flow').destroy(version.Id);
+    return [
+      {
+        name,
+        versionNumber: version.VersionNumber,
+        status: version.Status,
+        success: result.success,
+        error: result.success
+          ? undefined
+          : result.errors.map((error) => error.message).join('; '),
+      },
+    ];
+  } catch (error) {
+    const message = errorMessage(error);
+    const interviewIds = flowInterviewIdsFromError(message).filter(
+      (id) => !attemptedInterviewIds.has(id)
+    );
+    if (!interviewIds.length) {
+      return [
+        {
+          name,
+          versionNumber: version.VersionNumber,
+          status: version.Status,
+          success: false,
+          error: message,
+        },
+      ];
+    }
+    for (const id of interviewIds) attemptedInterviewIds.add(id);
+
+    let deletionResults;
+    try {
+      deletionResults = await conn
+        .sobject('FlowInterview')
+        .destroy(interviewIds, { allowRecursive: true });
+    } catch (deletionError) {
+      return interviewIds.map((interviewId) => ({
+        name,
+        versionNumber: version.VersionNumber,
+        interviewId,
+        status: version.Status,
+        success: false,
+        error: errorMessage(deletionError),
+      }));
+    }
+
+    const interviewResults = deletionResults.map((deletionResult, index) => ({
+      name,
+      versionNumber: version.VersionNumber,
+      interviewId: interviewIds[index],
+      status: version.Status,
+      success: deletionResult.success,
+      error: deletionResult.success
+        ? undefined
+        : deletionResult.errors.map((item) => item.message).join('; '),
+    }));
+    if (interviewResults.some((result) => !result.success))
+      return interviewResults;
+    return [
+      ...interviewResults,
+      ...(await deleteFlowVersion(conn, version, name, attemptedInterviewIds)),
+    ];
+  }
 }
 
 function escapeXml(value: string): string {
@@ -258,39 +405,41 @@ export async function deleteFlowVersions(
     }
   }
 
-  if (versionsToDelete.length) {
-    // Passing an ID array makes jsforce call /tooling/composite/sobjects,
-    // which returns NOT_FOUND. Keep the requests parallel but send one ID each.
-    await Promise.all(
-      versionsToDelete.map(async (version) => {
+  const interviewDeletionResults = await deleteFlowInterviews(
+    conn,
+    versionsToDelete,
+    nameByDefinitionId
+  );
+  const failedInterviewDeletionVersionIds = new Set(
+    interviewDeletionResults
+      .filter(({ result }) => !result.success)
+      .map(({ versionId }) => versionId)
+  );
+  for (const { result } of interviewDeletionResults) {
+    resultsByName.get(result.name)!.push(result);
+  }
+
+  // Passing an ID array makes jsforce call /tooling/composite/sobjects,
+  // which returns NOT_FOUND. Keep the requests parallel but send one ID each.
+  const versionDeletionResults = await Promise.all(
+    versionsToDelete
+      .filter((version) => !failedInterviewDeletionVersionIds.has(version.Id))
+      .map((version) => {
         const name = nameByDefinitionId.get(version.DefinitionId)!;
-        try {
-          const result = await conn.tooling.sobject('Flow').destroy(version.Id);
-          resultsByName.get(name)!.push({
-            name,
-            versionNumber: version.VersionNumber,
-            status: version.Status,
-            success: result.success,
-            error: result.success
-              ? undefined
-              : result.errors.map((error) => error.message).join('; '),
-          });
-        } catch (error) {
-          resultsByName.get(name)!.push({
-            name,
-            versionNumber: version.VersionNumber,
-            status: version.Status,
-            success: false,
-            error: errorMessage(error),
-          });
-        }
+        return deleteFlowVersion(conn, version, name);
       })
-    );
+  );
+  for (const results of versionDeletionResults) {
+    for (const result of results) resultsByName.get(result.name)!.push(result);
   }
 
   return names.flatMap((name) =>
     resultsByName
       .get(name)!
-      .sort((a, b) => (a.versionNumber ?? 0) - (b.versionNumber ?? 0))
+      .sort(
+        (a, b) =>
+          (a.versionNumber ?? 0) - (b.versionNumber ?? 0) ||
+          Number(Boolean(b.interviewId)) - Number(Boolean(a.interviewId))
+      )
   );
 }

@@ -13,6 +13,22 @@ import {
 describe('flow operations', () => {
   const $$ = new TestContext();
 
+  const mockFlowInterviewApi = (
+    interviews: Array<{ Id: string; FlowVersionViewId: string }> = [],
+    destroy = $$.SANDBOX.stub().resolves([])
+  ) => {
+    const maxFetch = $$.SANDBOX.stub().resolves(interviews);
+    const autoFetch = $$.SANDBOX.stub().returns({ maxFetch });
+    const where = $$.SANDBOX.stub().returns({ autoFetch });
+    const sobject = $$.SANDBOX.stub()
+      .withArgs('FlowInterview')
+      .returns({
+        select: () => ({ where }),
+        destroy,
+      });
+    return { sobject, where, autoFetch, maxFetch, destroy };
+  };
+
   it('deactivates an active flow definition', async () => {
     const update = $$.SANDBOX.stub().resolves({ success: true, errors: [] });
     const where = $$.SANDBOX.stub().resolves([
@@ -66,7 +82,9 @@ describe('flow operations', () => {
         Status: 'Active',
       },
     ]);
+    const flowInterviewApi = mockFlowInterviewApi();
     const conn = {
+      sobject: flowInterviewApi.sobject,
       tooling: {
         sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
           select: () => ({
@@ -176,7 +194,9 @@ describe('flow operations', () => {
         Status: 'Draft',
       },
     ]);
+    const flowInterviewApi = mockFlowInterviewApi();
     const conn = {
+      sobject: flowInterviewApi.sobject,
       tooling: {
         sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
           select: () => ({
@@ -220,7 +240,9 @@ describe('flow operations', () => {
         Status: 'Active',
       },
     ]);
+    const flowInterviewApi = mockFlowInterviewApi();
     const conn = {
+      sobject: flowInterviewApi.sobject,
       tooling: {
         sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
           select: () => ({
@@ -271,7 +293,9 @@ describe('flow operations', () => {
         Status: 'Draft',
       },
     ]);
+    const flowInterviewApi = mockFlowInterviewApi();
     const conn = {
+      sobject: flowInterviewApi.sobject,
       tooling: {
         sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
           select: () => ({
@@ -290,5 +314,210 @@ describe('flow operations', () => {
     expect(destroy.calledWith('301000000000002')).to.equal(true);
     expect(destroy.calledWith('301000000000003')).to.equal(false);
     expect(result[2].warning).to.equal('Latest version was skipped');
+  });
+
+  it('deletes Flow Interviews before deleting their Flow version', async () => {
+    const update = $$.SANDBOX.stub().resolves({ success: true, errors: [] });
+    const destroyFlow = $$.SANDBOX.stub().resolves({
+      success: true,
+      errors: [],
+    });
+    const destroyInterviews = $$.SANDBOX.stub().resolves([
+      { id: '0Fo000000000001', success: true, errors: [] },
+      { id: '0Fo000000000002', success: true, errors: [] },
+    ]);
+    const flowInterviewApi = mockFlowInterviewApi(
+      [
+        {
+          Id: '0Fo000000000001',
+          FlowVersionViewId: '301000000000001',
+        },
+        {
+          Id: '0Fo000000000002',
+          FlowVersionViewId: '301000000000001',
+        },
+      ],
+      destroyInterviews
+    );
+    const definitionWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '300000000000001',
+        DeveloperName: 'Flow1',
+        ActiveVersionId: null,
+      },
+    ]);
+    const flowWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '301000000000001',
+        DefinitionId: '300000000000001',
+        VersionNumber: 1,
+        Status: 'Draft',
+      },
+    ]);
+    const conn = {
+      sobject: flowInterviewApi.sobject,
+      tooling: {
+        sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
+          select: () => ({
+            where: type === 'FlowDefinition' ? definitionWhere : flowWhere,
+          }),
+          update,
+          destroy: destroyFlow,
+        })),
+      },
+    } as any;
+
+    const result = await deleteFlowVersions(conn, ['Flow1']);
+
+    expect(
+      flowInterviewApi.where.calledWith({
+        FlowVersionViewId: ['301000000000001'],
+      })
+    ).to.equal(true);
+    expect(flowInterviewApi.autoFetch.calledOnceWith(true)).to.equal(true);
+    expect(flowInterviewApi.maxFetch.calledOnceWith(1_000_000)).to.equal(true);
+    expect(
+      destroyInterviews.calledOnceWith(['0Fo000000000001', '0Fo000000000002'], {
+        allowRecursive: true,
+      })
+    ).to.equal(true);
+    expect(destroyInterviews.calledBefore(destroyFlow)).to.equal(true);
+    expect(result.map((item) => item.interviewId)).to.deep.equal([
+      '0Fo000000000001',
+      '0Fo000000000002',
+      undefined,
+    ]);
+    expect(result.every((item) => item.success)).to.equal(true);
+  });
+
+  it('does not delete a Flow version when its interview deletion fails', async () => {
+    const destroyFlow = $$.SANDBOX.stub().resolves({
+      success: true,
+      errors: [],
+    });
+    const destroyInterviews = $$.SANDBOX.stub().resolves([
+      {
+        id: '0Fo000000000001',
+        success: false,
+        errors: [{ message: 'Interview deletion failed' }],
+      },
+    ]);
+    const flowInterviewApi = mockFlowInterviewApi(
+      [
+        {
+          Id: '0Fo000000000001',
+          FlowVersionViewId: '301000000000001',
+        },
+      ],
+      destroyInterviews
+    );
+    const definitionWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '300000000000001',
+        DeveloperName: 'Flow1',
+        ActiveVersionId: null,
+      },
+    ]);
+    const flowWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '301000000000001',
+        DefinitionId: '300000000000001',
+        VersionNumber: 1,
+        Status: 'Draft',
+      },
+    ]);
+    const conn = {
+      sobject: flowInterviewApi.sobject,
+      tooling: {
+        sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
+          select: () => ({
+            where: type === 'FlowDefinition' ? definitionWhere : flowWhere,
+          }),
+          destroy: destroyFlow,
+        })),
+      },
+    } as any;
+
+    const result = await deleteFlowVersions(conn, ['Flow1']);
+
+    expect(destroyFlow.called).to.equal(false);
+    expect(result).to.deep.equal([
+      {
+        name: 'Flow1',
+        versionNumber: 1,
+        interviewId: '0Fo000000000001',
+        status: 'Draft',
+        success: false,
+        error: 'Interview deletion failed',
+      },
+    ]);
+  });
+
+  it('deletes a Flow Interview reported by Flow deletion and retries', async () => {
+    const destroyFlow = $$.SANDBOX.stub();
+    destroyFlow
+      .onFirstCall()
+      .rejects(
+        new Error(
+          'This flow version is referenced by a flow interview: Flow Interview - 0Fo000000000001.'
+        )
+      );
+    destroyFlow.onSecondCall().resolves({ success: true, errors: [] });
+    const destroyInterviews = $$.SANDBOX.stub().resolves([
+      { id: '0Fo000000000001', success: true, errors: [] },
+    ]);
+    const flowInterviewApi = mockFlowInterviewApi([], destroyInterviews);
+    const definitionWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '300000000000001',
+        DeveloperName: 'Flow1',
+        ActiveVersionId: null,
+      },
+    ]);
+    const flowWhere = $$.SANDBOX.stub().resolves([
+      {
+        Id: '301000000000001',
+        DefinitionId: '300000000000001',
+        VersionNumber: 1,
+        Status: 'Draft',
+      },
+    ]);
+    const conn = {
+      sobject: flowInterviewApi.sobject,
+      tooling: {
+        sobject: $$.SANDBOX.stub().callsFake((type: string) => ({
+          select: () => ({
+            where: type === 'FlowDefinition' ? definitionWhere : flowWhere,
+          }),
+          destroy: destroyFlow,
+        })),
+      },
+    } as any;
+
+    const result = await deleteFlowVersions(conn, ['Flow1']);
+
+    expect(destroyFlow.callCount).to.equal(2);
+    expect(
+      destroyInterviews.calledOnceWith(['0Fo000000000001'], {
+        allowRecursive: true,
+      })
+    ).to.equal(true);
+    expect(result).to.deep.equal([
+      {
+        name: 'Flow1',
+        versionNumber: 1,
+        interviewId: '0Fo000000000001',
+        status: 'Draft',
+        success: true,
+        error: undefined,
+      },
+      {
+        name: 'Flow1',
+        versionNumber: 1,
+        status: 'Draft',
+        success: true,
+        error: undefined,
+      },
+    ]);
   });
 });

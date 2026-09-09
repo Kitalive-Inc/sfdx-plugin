@@ -1,6 +1,6 @@
 # summary
 
-Delete Flows and all their versions
+Delete Flow versions and their related Flow Interviews
 
 # flags.name.summary
 

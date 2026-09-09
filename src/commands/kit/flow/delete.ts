@@ -43,13 +43,16 @@ export default class FlowDelete extends SfCommand<FlowOperationResult[]> {
         const version = result.versionNumber
           ? ` version ${result.versionNumber}`
           : '';
+        const interview = result.interviewId
+          ? ` interview ${result.interviewId}`
+          : '';
         if (result.error)
-          this.error(`${result.name}${version}: ${result.error}`, {
+          this.error(`${result.name}${version}${interview}: ${result.error}`, {
             exit: false,
           });
         else if (result.warning)
           this.warn(`${result.name}${version}: ${result.warning}`);
-        else this.log(`${result.name}${version}: deleted`);
+        else this.log(`${result.name}${version}${interview}: deleted`);
       }
     }
     if (results.some((result) => !result.success)) process.exitCode = 1;

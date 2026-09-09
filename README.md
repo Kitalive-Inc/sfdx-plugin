@@ -387,7 +387,7 @@ _See code: [src/commands/kit/flow/deactivate.ts](https://github.com/Kitalive-Inc
 
 ## `sf kit flow delete`
 
-Delete Flows and all their versions
+Delete Flow versions and their related Flow Interviews
 
 ```
 USAGE
